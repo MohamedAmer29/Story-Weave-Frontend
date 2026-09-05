@@ -16,6 +16,7 @@ import {
   Sparkles,
   Trash2,
   Wand2,
+  X,
 } from "lucide-react";
 import { storiesApi, illustrationApi } from "../api/storiesApi";
 import { Button } from "../components/ui/Button";
@@ -49,6 +50,7 @@ export function StoryReaderPage() {
   const dispatch = useAppDispatch();
   const [shareOpen, setShareOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [expandedImage, setExpandedImage] = useState<string | null>(null);
 
   const storyId = id!;
 
@@ -415,49 +417,68 @@ export function StoryReaderPage() {
                   </span>
                 </div>
                 <div className="grid grid-cols-1">
-                  <article className="p-6 sm:p-10 lg:p-12">
-                    {current.imageUrl ? (
-                      <figure className="mb-8">
-                        <img
-                          src={current.imageUrl}
-                          alt=""
-                          loading="lazy"
-                          className="mx-auto max-h-[28rem] rounded-xl border border-border object-contain"
-                        />
-                        {current.imageStatus !== "COMPLETED" && (
-                          <figcaption className="mt-2 text-center text-xs text-fg-faint">
-                            {statusLabel(current.imageStatus)}
-                          </figcaption>
-                        )}
-                      </figure>
-                    ) : (
-                      <div className="mb-8 flex items-center justify-center gap-2 rounded-xl border border-dashed border-border-strong bg-surface-2/60 p-8 text-sm text-fg-faint">
-                        {activeStatuses.includes(
-                          (current.imageStatus ??
-                            "PENDING") as IllustrationPageStatus,
-                        ) ? (
-                          <>
-                            <Loader2
-                              className="size-4 animate-spin"
-                              aria-hidden
-                            />
-                            {
-                              t.reader.illustrationStatus[
-                                current.imageStatus ?? "PENDING"
-                              ]
-                            }
-                          </>
-                        ) : current.imageStatus === "FAILED" ? (
-                          t.reader.illustrationStatus.FAILED
-                        ) : null}
-                      </div>
-                    )}
-                    <p
-                      className="whitespace-pre-line text-lg leading-loose text-fg"
-                      dir={dir}
-                    >
-                      {current.text}
-                    </p>
+                  <article className="p-6 sm:p-10 lg:p-12" dir={dir}>
+                    <div className="story-book-layout">
+                      {current.imageUrl ? (
+                        <figure
+                          className={cn(
+                            "story-book-figure cursor-pointer",
+                            dir === "rtl"
+                              ? "story-book-figure-rtl"
+                              : "story-book-figure-ltr",
+                          )}
+                          onClick={() =>
+                            setExpandedImage(current.imageUrl ?? null)
+                          }
+                        >
+                          <img
+                            src={current.imageUrl}
+                            alt=""
+                            loading="lazy"
+                            className="mx-auto max-h-[28rem] rounded-xl border border-border object-contain shadow-lg transition-transform duration-200 hover:scale-[1.02]"
+                          />
+                          {current.imageStatus !== "COMPLETED" && (
+                            <figcaption className="mt-2 text-center text-xs text-fg-faint">
+                              {statusLabel(current.imageStatus)}
+                            </figcaption>
+                          )}
+                        </figure>
+                      ) : (
+                        <div
+                          className={cn(
+                            "story-book-figure story-book-placeholder",
+                            dir === "rtl"
+                              ? "story-book-figure-rtl"
+                              : "story-book-figure-ltr",
+                          )}
+                        >
+                          <div className="flex min-h-[14rem] items-center justify-center gap-2 rounded-xl border border-dashed border-border-strong bg-surface-2/60 p-8 text-sm text-fg-faint">
+                            {activeStatuses.includes(
+                              (current.imageStatus ??
+                                "PENDING") as IllustrationPageStatus,
+                            ) ? (
+                              <>
+                                <Loader2
+                                  className="size-4 animate-spin"
+                                  aria-hidden
+                                />
+                                {
+                                  t.reader.illustrationStatus[
+                                    current.imageStatus ?? "PENDING"
+                                  ]
+                                }
+                              </>
+                            ) : current.imageStatus === "FAILED" ? (
+                              t.reader.illustrationStatus.FAILED
+                            ) : null}
+                          </div>
+                        </div>
+                      )}
+
+                      <p className="story-book-text whitespace-pre-line text-lg leading-loose text-fg">
+                        {current.text}
+                      </p>
+                    </div>
                   </article>
                 </div>
               </div>
@@ -487,6 +508,31 @@ export function StoryReaderPage() {
           )}
         </div>
       </section>
+
+      {expandedImage && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-overlay p-4 backdrop-blur-sm"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) setExpandedImage(null);
+          }}
+        >
+          <div className="relative flex h-full w-full items-center justify-center">
+            <button
+              type="button"
+              onClick={() => setExpandedImage(null)}
+              aria-label={t.common.close}
+              className="absolute right-4 top-4 z-10 rounded-full border border-border bg-surface/80 p-2 text-fg shadow-lg transition hover:bg-surface"
+            >
+              <X className="size-5" />
+            </button>
+            <img
+              src={expandedImage}
+              alt="Expanded story illustration"
+              className="max-h-[92vh] w-full max-w-[96vw] rounded-2xl border border-border bg-surface object-contain shadow-2xl transition-transform duration-200"
+            />
+          </div>
+        </div>
+      )}
 
       <ShareModal
         storyId={storyId}

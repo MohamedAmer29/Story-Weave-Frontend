@@ -57,10 +57,17 @@ export function Navbar() {
   const mobileOpen = useAppSelector((s) => s.ui.mobileNavOpen);
   const { data: unreadCount } = useUnreadCount();
 
-  const links = isAuthenticated ? userLinks(t) : guestLinks(t);
-  const isHomeActive = location.pathname === "/" && !location.hash;
-  const isFeaturesActive =
-    location.pathname === "/" && location.hash === "#features";
+  const isLandingPage = location.pathname === "/";
+  const guestNavLinks = guestLinks(t);
+  const links = isAuthenticated
+    ? userLinks(t)
+    : isLandingPage
+      ? guestNavLinks
+      : guestNavLinks.filter((link) => link.to !== "/#features");
+  const isHomeActive = isLandingPage && !location.hash;
+  const isFeaturesActive = isLandingPage && location.hash === "#features";
+  const isExploreActive = location.pathname === "/explore";
+  const isHowItWorksActive = location.pathname === "/how-it-works";
 
   const handleLogout = async () => {
     dispatch(closeMobileNav());
@@ -87,15 +94,23 @@ export function Navbar() {
               const isActive =
                 link.to === "/"
                   ? isHomeActive
-                  : link.to === "/#features"
-                    ? isFeaturesActive
-                    : false;
+                  : link.to === "/explore"
+                    ? isExploreActive
+                    : link.to === "/how-it-works"
+                      ? isHowItWorksActive
+                      : link.to === "/#features"
+                        ? isFeaturesActive
+                        : false;
 
               return (
                 <NavLink
                   key={link.key}
                   to={link.to}
-                  end={link.to === "/"}
+                  end={
+                    link.to === "/" ||
+                    link.to === "/explore" ||
+                    link.to === "/how-it-works"
+                  }
                   onClick={(event) => {
                     if (link.to === "/#features") {
                       event.preventDefault();
@@ -120,7 +135,7 @@ export function Navbar() {
                     cn(
                       "rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                       isActive
-                        ? "text-brand-600 dark:text-brand-400 bg-brand-500/10"
+                        ? "bg-brand-500/10 text-brand-600 dark:bg-brand-500/15 dark:text-brand-300"
                         : "text-fg-muted hover:bg-surface-3 hover:text-fg",
                     )
                   }
