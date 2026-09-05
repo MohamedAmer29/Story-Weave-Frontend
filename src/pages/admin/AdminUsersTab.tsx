@@ -1,27 +1,51 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-toastify";
-import { Search } from "lucide-react";
+import { Search, Eye, ExternalLink } from "lucide-react";
 import { adminApi } from "../../api/adminApi";
+import { usersApi } from "../../api/usersApi";
 import { Input, Select } from "../../components/ui/field";
 import { Button } from "../../components/ui/Button";
 import { Badge } from "../../components/ui/Badge";
 import { Skeleton } from "../../components/ui/Skeleton";
 import { Pagination } from "../../components/ui/Pagination";
+import { Modal } from "../../components/ui/Modal";
 import { getErrorMessage } from "../../api/axios";
 import { useLanguage } from "../../i18n";
-import type { UserRole } from "../../api/types";
+import type { UserRole, StoryLibraryItem } from "../../api/types";
 
 export function AdminUsersTab() {
+  return (
+    <>
+      <AdminUsersTabContent />
+      <UserDetailModal />
+    </>
+  );
+}
+
+function AdminUsersTabContent() {
   const { t } = useLanguage();
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [role, setRole] = useState<"" | UserRole>("");
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
   const query = useQuery({
     queryKey: ["admin", "users", { page, search, role }],
     queryFn: () => adminApi.listUsers({ page, limit: 10, search: search || undefined, role: role || undefined }),
+  });
+
+  const userDetailQuery = useQuery({
+    queryKey: ["admin", "user", selectedUserId],
+    queryFn: () => adminApi.getUser(selectedUserId!),
+    enabled: !!selectedUserId,
+  });
+
+  const publicStoriesQuery = useQuery({
+    queryKey: ["admin", "user", selectedUserId, "public-stories"],
+    queryFn: () => usersApi.getPublicStories(selectedUserId!, { page: 1, limit: 10 }),
+    enabled: !!selectedUserId,
   });
 
   const invalidate = () => void queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
@@ -109,14 +133,24 @@ export function AdminUsersTab() {
                   </td>
                   <td className="px-4 py-3 text-fg-muted">{user.storyCount}</td>
                   <td className="px-4 py-3 text-end">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => activeMutation.mutate({ id: user.id, isActive: !user.isActive })}
-                      loading={activeMutation.isPending}
-                    >
-                      {user.isActive ? "Deactivate" : "Activate"}
-                    </Button>
+                    <div className="flex items-center justify-end gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSelectedUserId(user.id)}
+                        aria-label={t.admin.userDetailTitle}
+                      >
+                        <Eye className="size-4" aria-hidden />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => activeMutation.mutate({ id: user.id, isActive: !user.isActive })}
+                        loading={activeMutation.isPending}
+                      >
+                        {user.isActive ? "Deactivate" : "Activate"}
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -127,5 +161,125 @@ export function AdminUsersTab() {
 
       <Pagination className="mt-6" page={page} totalPages={meta?.totalPages ?? 1} onPageChange={setPage} />
     </div>
+  );
+}
+
+function UserDetailModal() {
+  const { t } = useLanguage();
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+
+  const userDetailQuery = useQuery({
+    queryKey: ["admin", "user", selectedUserId],
+    queryFn: () => adminApi.getUser(selectedUserId!),
+    enabled: !!selectedUserId,
+  });
+
+  const publicStoriesQuery = useQuery({
+    queryKey: ["admin", "user", selectedUserId, "public-stories"],
+    queryFn: () => usersApi.getPublicStories(selectedUserId!, { page: 1, limit: 10 }),
+    enabled: !!selectedUserId,
+  });
+
+  if (!selectedUserId) return null;
+
+  const user = userDetailQuery.data?.data;
+  const publicStories = publicStoriesQuery.data?.data ?? [];
+
+  return (
+    <Modal
+      open={!!selectedUserId}
+      onClose={() => setSelectedUserId(null)}
+      title={t.admin.userDetailTitle}
+      size="lg"
+    >
+      {userDetailQuery.isLoading ? (
+        <div className="space-y-4">
+          <Skeleton className="h-12" />
+          <Skeleton className="h-12" />
+          <Skeleton className="h-12" />
+        </div>
+      ) : user ? (
+        <div className="space-y-6">
+          <div className="flex items-center gap-4">
+            {user.avatarUrl && (
+              <img src={user.avatarUrl} alt={user.name} className="size-16 rounded-full bg-surface-2" />
+            )}
+            <div>
+              <h3 className="text-lg font-bold text-fg">{user.name}</h3>
+              <p className="text-sm text-fg-muted">{user.email}</p>
+              <div className="mt-2 flex items-center gap-3">
+                <Badge tone={user.role === "ADMIN" ? "danger" : user.role === "MANAGER" ? "warning" : "neutral"}>
+                  {user.role}
+                </Badge>
+                <Badge tone={user.isActive ? "success" : "danger"} dot>
+                  {user.isActive ? "Active" : "Inactive"}
+                </Badge>
+                <Badge tone={user.emailVerified ? "success" : "warning"} dot>
+                  {user.emailVerified ? "Verified" : "Unverified"}
+                </Badge>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="rounded-lg bg-surface-2 p-3">
+              <p className="text-fg-faint">{t.auth.createdAt}</p>
+              <p className="font-medium text-fg">{new Date(user.createdAt).toLocaleDateString()}</p>
+            </div>
+            <div className="rounded-lg bg-surface-2 p-3">
+              <p className="text-fg-faint">{t.admin.userStories}</p>
+              <p className="font-medium text-fg">{user.storyCount}</p>
+            </div>
+          </div>
+
+          <div>
+            <h4 className="mb-3 font-semibold text-fg">{t.admin.publicStories}</h4>
+            {publicStoriesQuery.isLoading ? (
+              <div className="space-y-3">
+                <Skeleton className="h-12" />
+                <Skeleton className="h-12" />
+              </div>
+            ) : publicStories.length === 0 ? (
+              <p className="text-sm text-fg-muted">{t.common.empty}</p>
+            ) : (
+              <div className="space-y-2">
+                {publicStories.map((story: StoryLibraryItem) => (
+                  <div
+                    key={story.id}
+                    className="flex items-center justify-between gap-3 rounded-lg border border-border bg-surface p-3"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      {story.coverImageUrl && (
+                        <img
+                          src={story.coverImageUrl}
+                          alt={story.title}
+                          className="size-12 shrink-0 rounded-lg object-cover"
+                        />
+                      )}
+                      <div className="min-w-0">
+                        <p className="font-medium text-fg truncate">{story.title}</p>
+                        <p className="text-xs text-fg-muted">
+                          {story.totalPages} pages · {story.status}
+                        </p>
+                      </div>
+                    </div>
+                    <a
+                      href={`/stories/${story.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-brand-600 hover:underline"
+                    >
+                      <ExternalLink className="size-4" aria-hidden />
+                    </a>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        <p className="text-sm text-fg-muted">{t.common.error}</p>
+      )}
+    </Modal>
   );
 }

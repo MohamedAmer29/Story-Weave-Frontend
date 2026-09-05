@@ -46,4 +46,12 @@ export const usersApi = {
     api
       .get<Paginated<StoryLibraryItem>>("/users/me/shared-stories", { params: query })
       .then((r) => r.data),
+
+  getPublicProfile: (userId: string) =>
+    api.get<Wrapped<UserProfile>>(`/users/${userId}/public-profile`).then((r) => r.data),
+
+  getPublicStories: (userId: string, query: LibraryQuery = {}) =>
+    api
+      .get<Paginated<StoryLibraryItem>>(`/users/${userId}/public-stories`, { params: query })
+      .then((r) => r.data),
 };

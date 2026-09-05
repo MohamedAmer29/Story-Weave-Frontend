@@ -30,7 +30,19 @@ export interface StoryQuery extends PublicStoryQuery {
   visibility?: string;
 }
 
+export interface StoryTypesResponse {
+  types: string[];
+}
+
 export const storiesApi = {
+  getAll: (query: StoryQuery = {}) =>
+    api.get<PaginatedStories>("/stories", { params: query }).then((r) => r.data),
+
+  searchPublic: (query: { q: string; page?: number; limit?: number }) =>
+    api.get<PaginatedStories>("/stories/public/search", { params: query }).then((r) => r.data),
+
+  getTypes: () =>
+    api.get<StoryTypesResponse>("/stories/types").then((r) => r.data),
   create: (payload: CreateStoryInput) =>
     api.post<StoryResponse>("/stories", payload).then((r) => r.data),
 

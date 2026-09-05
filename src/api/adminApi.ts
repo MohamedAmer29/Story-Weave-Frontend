@@ -85,4 +85,28 @@ export const adminApi = {
 
   resetAiUsage: () =>
     api.post<{ success: boolean; message: string }>("/admin/system/ai-usage/reset").then((r) => r.data),
+
+  getUser: (id: string) =>
+    api.get<{ success: boolean; data: AdminUser }>(`/admin/users/${id}`).then((r) => r.data),
+
+  queueFailures: (query: AdminQuery = {}) =>
+    api
+      .get<{ success: boolean; data: unknown[]; meta: PaginationMeta }>("/admin/system/queue/failures", {
+        params: query,
+      })
+      .then((r) => r.data),
+
+  generations: (query: AdminQuery = {}) =>
+    api
+      .get<{ success: boolean; data: unknown[]; meta: PaginationMeta }>("/admin/system/generations", {
+        params: query,
+      })
+      .then((r) => r.data),
+
+  audit: (query: AdminQuery = {}) =>
+    api
+      .get<{ success: boolean; data: unknown[]; meta: PaginationMeta }>("/admin/system/audit", {
+        params: query,
+      })
+      .then((r) => r.data),
 };

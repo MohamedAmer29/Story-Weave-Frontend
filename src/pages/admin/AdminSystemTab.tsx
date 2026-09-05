@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-toastify";
-import { RotateCcw, Server } from "lucide-react";
+import { RotateCcw, Server, LogOut } from "lucide-react";
 import { adminApi } from "../../api/adminApi";
+import { authApi } from "../../api/authApi";
 import { Card, CardBody, CardHeader } from "../../components/ui/Card";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
@@ -58,6 +59,14 @@ export function AdminSystemTab() {
     onError: (err) => toast.error(getErrorMessage(err) ?? t.common.error),
   });
 
+  const revokeOtherSessionsMutation = useMutation({
+    mutationFn: () => authApi.revokeOtherSessions(),
+    onSuccess: () => {
+      toast.success(t.admin.revokeOtherSessionsSuccess);
+    },
+    onError: (err) => toast.error(getErrorMessage(err) ?? t.common.error),
+  });
+
   return (
     <div>
       <h2 className="mb-4 text-lg font-bold text-fg">{t.admin.systemTitle}</h2>
@@ -91,6 +100,18 @@ export function AdminSystemTab() {
                 ))}
               </div>
             )}
+            <div className="mt-4 pt-4 border-t border-border">
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={() => revokeOtherSessionsMutation.mutate()}
+                loading={revokeOtherSessionsMutation.isPending}
+              >
+                <LogOut className="size-4 mr-2" aria-hidden />
+                {t.admin.revokeOtherSessions}
+              </Button>
+            </div>
           </CardBody>
         </Card>
 

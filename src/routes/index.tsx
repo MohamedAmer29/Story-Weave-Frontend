@@ -21,7 +21,11 @@ import { ProfilePage } from "../pages/ProfilePage";
 import { SettingsPage } from "../pages/SettingsPage";
 import { AdminPage } from "../pages/AdminPage";
 import { AdminNotificationsPage } from "../pages/admin/AdminNotificationsPage";
+import { AdminHealthPage } from "../pages/admin/AdminHealthPage";
+import { AdminQueuePage } from "../pages/admin/AdminQueuePage";
+import { AdminAuditPage } from "../pages/admin/AdminAuditPage";
 import { NotFoundPage } from "../pages/errors/NotFoundPage";
+import { AuthorProfilePage } from "../pages/AuthorProfilePage";
 
 export function AppRoutes() {
   return (
@@ -62,6 +66,7 @@ export function AppRoutes() {
           }
         />
         <Route path="/stories/:id" element={<StoryReaderPage />} />
+        <Route path="/author/:userId" element={<AuthorProfilePage />} />
 
         <Route
           path="/dashboard"
@@ -131,6 +136,18 @@ export function AppRoutes() {
           <Route
             path="/admin/notifications"
             element={<AdminNotificationsPage />}
+          />
+          <Route
+            path="/admin/health"
+            element={<AdminHealthPage />}
+          />
+          <Route
+            path="/admin/queue"
+            element={<AdminQueuePage />}
+          />
+          <Route
+            path="/admin/audit"
+            element={<AdminAuditPage />}
           />
         </Route>
 

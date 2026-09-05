@@ -13,6 +13,7 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { Navbar } from "../components/layout/Navbar";
 import { Footer } from "../components/layout/Footer";
+import { Avatar } from "../components/ui/Avatar";
 import { useLanguage } from "../i18n";
 import { useTheme } from "../theme";
 import { useAuth, useIsAdmin } from "../hooks/useAuth";
@@ -48,27 +49,24 @@ function AuthenticatedSidebar() {
       <div className="sticky top-20 p-4">
         <div className="mb-4 rounded-2xl border border-border bg-surface p-3 shadow-sm">
           <div className="flex items-center gap-3">
-            {user.avatarUrl ? (
-              <img
-                src={user.avatarUrl}
-                alt={user.name ?? user.email}
-                className="size-11 rounded-full border border-border object-cover"
-              />
-            ) : (
-              <span className="flex size-11 items-center justify-center rounded-full bg-brand-600 text-sm font-bold text-white">
-                {(user.firstName?.[0] ?? user.email?.[0] ?? "U").toUpperCase()}
-              </span>
-            )}
+            <Avatar
+              src={user.avatarUrl ?? undefined}
+              name={`${user.firstName ?? ""} ${user.lastName ?? ""}`}
+              size="md"
+            />
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-fg">
-                {user.name ?? user.email}
+                {user.firstName} {user.lastName}
               </p>
               <p className="truncate text-xs text-fg-muted">{user.email}</p>
             </div>
           </div>
         </div>
 
-        <nav className="space-y-1" aria-label={t.nav.menu}>
+        <nav
+          className="space-y-1 justify-between flex flex-col"
+          aria-label={t.nav.menu}
+        >
           {navItems.map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
@@ -129,11 +127,10 @@ function AuthenticatedSidebar() {
           )}
 
           <div className="my-3 h-px bg-border" />
-
           <button
             type="button"
             onClick={() => void logout()}
-            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-red-600 transition-colors hover:bg-red-500/10 dark:text-red-400"
+            className="flex  w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-red-600 transition-colors hover:bg-red-500/10 dark:text-red-400"
           >
             <LogOut className="size-4" aria-hidden />
             {t.nav.logout}

@@ -3,6 +3,7 @@ import { Helmet } from "react-helmet-async";
 import { useQuery } from "@tanstack/react-query";
 import { Search } from "lucide-react";
 import { storiesApi } from "../api/storiesApi";
+import type { StoryType } from "../api/types";
 import { StoryCard } from "../components/home/StoryCard";
 import { SkeletonGrid } from "../components/ui/Skeleton";
 import { EmptyState, ErrorState } from "../components/ui/States";
@@ -15,10 +16,16 @@ export function ExplorePage() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [sort, setSort] = useState<"latest" | "oldest" | "updated">("latest");
+  const [storyType, setStoryType] = useState<"" | StoryType>("");
 
   const query = useQuery({
-    queryKey: ["stories", "explore", { page, search, sort }],
-    queryFn: () => storiesApi.publicStories({ page, limit: 9, search: search || undefined, sort }),
+    queryKey: ["stories", "explore", { page, search, sort, storyType }],
+    queryFn: () => {
+      if (search) {
+        return storiesApi.searchPublic({ q: search, page, limit: 9, sort: storyType ? undefined : sort });
+      }
+      return storiesApi.publicStories({ page, limit: 9, sort, sourceType: storyType || undefined });
+    },
   });
 
   const stories = query.data?.data ?? [];
@@ -65,6 +72,22 @@ export function ExplorePage() {
               <option value="latest">{t.sort.latest}</option>
               <option value="oldest">{t.sort.oldest}</option>
               <option value="updated">{t.sort.updated}</option>
+            </Select>
+            <Select
+              value={storyType}
+              onChange={(e) => {
+                setStoryType(e.target.value as "" | StoryType);
+                setPage(1);
+              }}
+              aria-label={t.create.storyType}
+              className="w-full sm:w-auto"
+            >
+              <option value="">{t.create.storyType}</option>
+              {(["FANTASY", "ADVENTURE", "SCI_FI", "MYSTERY", "HORROR", "ROMANCE", "COMEDY", "DRAMA", "HISTORICAL", "FAIRY_TALE", "CHILDREN", "ACTION", "THRILLER"] as const).map((st) => (
+                <option key={st} value={st}>
+                  {st.replace(/_/g, " ")}
+                </option>
+              ))}
             </Select>
           </div>
 

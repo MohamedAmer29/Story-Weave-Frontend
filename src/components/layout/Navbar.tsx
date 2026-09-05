@@ -2,6 +2,7 @@ import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   Bell,
   ChevronDown,
+  LogOut,
   Menu as MenuIcon,
   Settings,
   ShieldCheck,
@@ -10,6 +11,7 @@ import {
 import { Logo } from "../ui/Logo";
 import { Button } from "../ui/Button";
 import { Dropdown, MenuItem } from "../ui/Dropdown";
+import { Avatar } from "../ui/Avatar";
 import { LanguageSwitcher, ThemeToggle } from "./themeControls";
 import { useAuth, useIsAdmin } from "../../hooks/useAuth";
 import { useUnreadCount } from "../../hooks/useNotifications";
@@ -18,7 +20,6 @@ import { cn } from "../../lib/cn";
 import { useLanguage } from "../../i18n";
 import { closeMobileNav, openMobileNav } from "../../store/uiSlice";
 import { useAppDispatch, useAppSelector } from "../../store";
-import { buildResponsiveSrcSet } from "../../utils/imageSrcSet";
 
 interface NavLinkDef {
   to: string;
@@ -213,24 +214,14 @@ export function Navbar() {
                 ariaLabel={t.nav.profile}
                 trigger={
                   <span className="flex items-center gap-2 rounded-xl border border-border bg-surface px-2 py-1.5">
-                    {user?.avatarUrl ? (
-                      <img
-                        src={user.avatarUrl}
-                        alt={user.name ?? user.firstName ?? ""}
-                        loading="lazy"
-                        srcSet={
-                          buildResponsiveSrcSet(user.avatarUrl) ?? undefined
-                        }
-                        className="size-9 rounded-full border border-border object-cover"
-                      />
-                    ) : (
-                      <span className="flex size-9 items-center justify-center rounded-full bg-gradient-to-br from-brand-600 to-navy-800 text-sm font-bold text-white">
-                        {(user?.firstName?.[0] ?? "U").toUpperCase()}
-                      </span>
-                    )}
+                    <Avatar
+                      src={user?.avatarUrl ?? undefined}
+                      name={`${user?.firstName ?? ""} ${user?.lastName ?? ""}`}
+                      size="md"
+                    />
                     <span className="hidden min-w-0 sm:block">
                       <span className="block truncate text-sm font-semibold text-fg">
-                        {user?.name ?? user?.email}
+                        {user?.firstName} {user?.lastName}
                       </span>
                       <span className="block text-[11px] uppercase tracking-[0.15em] text-fg-muted">
                         {user?.role ?? "ADMIN"}
@@ -242,13 +233,20 @@ export function Navbar() {
               >
                 {(close) => (
                   <>
-                    <div className="px-3 py-2">
-                      <p className="truncate text-sm font-semibold text-fg">
-                        {user?.name ?? user?.email}
-                      </p>
-                      <p className="truncate text-xs text-fg-muted">
-                        {user?.email}
-                      </p>
+                    <div className="flex items-center gap-3 px-3 py-2">
+                      <Avatar
+                        src={user?.avatarUrl ?? undefined}
+                        name={`${user?.firstName ?? ""} ${user?.lastName ?? ""}`}
+                        size="lg"
+                      />
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-fg">
+                          {user?.firstName} {user?.lastName}
+                        </p>
+                        <p className="truncate text-xs text-fg-muted">
+                          {user?.email}
+                        </p>
+                      </div>
                     </div>
                     <div className="my-1 h-px bg-border" />
                     <MenuItem
@@ -258,6 +256,15 @@ export function Navbar() {
                       }}
                     >
                       <Settings className="size-4" /> {t.nav.settings}
+                    </MenuItem>
+                    <MenuItem
+                      onClick={() => {
+                        close();
+                        void handleLogout();
+                      }}
+                      danger
+                    >
+                      <LogOut className="size-4" /> {t.nav.logout}
                     </MenuItem>
                   </>
                 )}

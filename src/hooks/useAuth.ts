@@ -1,12 +1,14 @@
 import { useCallback, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { authApi, type LoginPayload, type RegisterPayload } from "../api/authApi";
+import { usersApi } from "../api/usersApi";
 import { useAppDispatch, useAppSelector } from "../store";
 import {
   clearCredentials,
   setCredentials,
   setStatus,
   setUser,
+  updateLocalUser,
   type AuthenticatedUser,
 } from "../store/authSlice";
 
@@ -19,7 +21,21 @@ export function useAuth() {
       dispatch(setStatus("loading"));
       authApi
         .me()
-        .then((u) => dispatch(setUser(u as AuthenticatedUser)))
+        .then((u) => {
+          usersApi
+            .me()
+            .then((userData) => {
+              dispatch(
+                setUser({
+                  ...u,
+                  avatarUrl: userData.data.avatarUrl,
+                } as AuthenticatedUser),
+              );
+            })
+            .catch(() => {
+              dispatch(setUser(u as AuthenticatedUser));
+            });
+        })
         .catch(() => dispatch(clearCredentials()))
         .finally(() => {
           // status handled in reducers
@@ -34,8 +50,14 @@ export function useAuth() {
         setCredentials({
           token: res.accessToken,
           user: res.user as AuthenticatedUser,
-        })
+        }),
       );
+      usersApi
+        .me()
+        .then((userData) => {
+          dispatch(updateLocalUser({ avatarUrl: userData.data.avatarUrl }));
+        })
+        .catch(() => {});
     },
   });
 
@@ -46,8 +68,14 @@ export function useAuth() {
         setCredentials({
           token: res.accessToken,
           user: res.user as AuthenticatedUser,
-        })
+        }),
       );
+      usersApi
+        .me()
+        .then((userData) => {
+          dispatch(updateLocalUser({ avatarUrl: userData.data.avatarUrl }));
+        })
+        .catch(() => {});
     },
   });
 

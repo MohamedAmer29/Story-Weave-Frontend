@@ -21,8 +21,8 @@ const COVER_H = PAGE_H + 0.1; // cover pokes above/below the page block
 const COVER_T = 0.05; // cover board thickness
 const COVER_GAP = 0.004; // gap between page block and cover
 
-const SPINE_W = 0.05;
-const SPINE_D = 0.085;
+const SPINE_W = 0.09;
+const SPINE_D = 0.05;
 const SPINE_Z = -0.06; // tucked behind the page crease
 
 const BELLY = 0.03; // pages bulge gently toward the viewer
@@ -203,7 +203,13 @@ function Sway({ children }: { children: ReactNode }) {
 }
 
 /** Drag anywhere on the canvas to rotate the book in place. */
-function Rig({ rotation, children }: { rotation: [number, number, number]; children: ReactNode }) {
+function Rig({
+  rotation,
+  children,
+}: {
+  rotation: [number, number, number];
+  children: ReactNode;
+}) {
   const ref = useRef<THREE.Group>(null);
   const gl = useThree((s) => s.gl);
   const state = useRef({

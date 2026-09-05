@@ -6,6 +6,7 @@ import { toast } from "react-toastify";
 import { Plus, Search, Trash2, BookOpen } from "lucide-react";
 import { usersApi } from "../api/usersApi";
 import { storiesApi } from "../api/storiesApi";
+import type { StoryType } from "../api/types";
 import { StoryCard } from "../components/home/StoryCard";
 import { SkeletonGrid } from "../components/ui/Skeleton";
 import { EmptyState } from "../components/ui/States";
@@ -28,17 +29,19 @@ export function LibraryPage() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [visibility, setVisibility] = useState("");
+  const [storyType, setStoryType] = useState<"" | StoryType>("");
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
 
   const mineQuery = useQuery({
-    queryKey: ["library", "mine", { page, search, status, visibility }],
+    queryKey: ["library", "mine", { page, search, status, visibility, storyType }],
     queryFn: () =>
-      usersApi.myStories({
+      storiesApi.myStories({
         page,
         limit: 9,
         search: search || undefined,
         status: status || undefined,
         visibility: visibility || undefined,
+        sourceType: storyType || undefined,
       }),
     enabled: tab === "mine",
   });
@@ -68,10 +71,11 @@ export function LibraryPage() {
     setSearch("");
     setStatus("");
     setVisibility("");
+    setStoryType("");
     setPage(1);
   };
 
-  const filtersActive = Boolean(search || status || visibility);
+  const filtersActive = Boolean(search || status || visibility || storyType);
 
   return (
     <>
@@ -169,6 +173,22 @@ export function LibraryPage() {
                 {(["PUBLIC", "PRIVATE", "SHARED"] as const).map((v) => (
                   <option key={v} value={v}>
                     {t.status[v]}
+                  </option>
+                ))}
+              </Select>
+              <Select
+                value={storyType}
+                onChange={(e) => {
+                  setStoryType(e.target.value as "" | StoryType);
+                  setPage(1);
+                }}
+                aria-label={t.create.storyType}
+                className="lg:w-44"
+              >
+                <option value="">{t.create.storyType}</option>
+                {(["FANTASY", "ADVENTURE", "SCI_FI", "MYSTERY", "HORROR", "ROMANCE", "COMEDY", "DRAMA", "HISTORICAL", "FAIRY_TALE", "CHILDREN", "ACTION", "THRILLER"] as const).map((st) => (
+                  <option key={st} value={st}>
+                    {st.replace(/_/g, " ")}
                   </option>
                 ))}
               </Select>

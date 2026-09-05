@@ -47,6 +47,9 @@ export const authApi = {
   revokeSession: (sessionId: string) =>
     api.delete<MessageResponse>(`/auth/sessions/${sessionId}`).then((r) => r.data),
 
+  revokeOtherSessions: () =>
+    api.delete<MessageResponse>("/auth/sessions/others").then((r) => r.data),
+
   verifyEmail: (payload: { email: string; otp: string }) =>
     api.post<MessageResponse>("/auth/verify-email", payload).then((r) => r.data),
 

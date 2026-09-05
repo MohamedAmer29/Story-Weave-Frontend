@@ -21,8 +21,11 @@ import { cn } from "../lib/cn";
 import { AdminUsersTab } from "./admin/AdminUsersTab";
 import { AdminStoriesTab } from "./admin/AdminStoriesTab";
 import { AdminSystemTab } from "./admin/AdminSystemTab";
+import { AdminHealthPage } from "./admin/AdminHealthPage";
+import { AdminQueuePage } from "./admin/AdminQueuePage";
+import { AdminAuditPage } from "./admin/AdminAuditPage";
 
-type Tab = "overview" | "users" | "stories" | "system";
+type Tab = "overview" | "users" | "stories" | "system" | "health" | "queue" | "audit";
 
 export function AdminPage() {
   const { t } = useLanguage();
@@ -35,6 +38,9 @@ export function AdminPage() {
       { id: "users", label: t.admin.users, icon: Users },
       { id: "stories", label: t.admin.stories, icon: BookOpen },
       { id: "system", label: t.admin.system, icon: Server },
+      { id: "health", label: t.admin.healthTitle, icon: Server },
+      { id: "queue", label: t.admin.queueTitle, icon: AlertTriangle },
+      { id: "audit", label: t.admin.audit, icon: ShieldCheck },
     ];
 
   useEffect(() => {
@@ -43,7 +49,10 @@ export function AdminPage() {
       nextTab === "overview" ||
       nextTab === "users" ||
       nextTab === "stories" ||
-      nextTab === "system"
+      nextTab === "system" ||
+      nextTab === "health" ||
+      nextTab === "queue" ||
+      nextTab === "audit"
     ) {
       setTab(nextTab);
     } else {
@@ -105,6 +114,9 @@ export function AdminPage() {
           {tab === "users" && <AdminUsersTab />}
           {tab === "stories" && <AdminStoriesTab />}
           {tab === "system" && <AdminSystemTab />}
+          {tab === "health" && <AdminHealthPage />}
+          {tab === "queue" && <AdminQueuePage />}
+          {tab === "audit" && <AdminAuditPage />}
         </div>
       </section>
     </>
