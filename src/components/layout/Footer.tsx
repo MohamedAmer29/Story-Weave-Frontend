@@ -8,6 +8,16 @@ export function Footer() {
   const { t } = useLanguage();
   const { isAuthenticated } = useAuth();
 
+  if (isAuthenticated) {
+    return (
+      <footer className="border-t  border-border bg-surface/60">
+        <div className="mx-auto mt-4 max-w-7xl px-4 py-3 text-center text-xs text-fg-faint sm:px-6 lg:px-8">
+          © {new Date().getFullYear()} {t.brand.name} — {t.footer.rights}
+        </div>
+      </footer>
+    );
+  }
+
   return (
     <footer className="border-t border-border bg-surface">
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
@@ -80,12 +90,10 @@ export function Footer() {
                   type="button"
                   onClick={() => {
                     if (window.location.pathname === "/") {
-                      document
-                        .getElementById("features")
-                        ?.scrollIntoView({
-                          behavior: "smooth",
-                          block: "start",
-                        });
+                      document.getElementById("features")?.scrollIntoView({
+                        behavior: "smooth",
+                        block: "start",
+                      });
                       return;
                     }
                     window.location.href = "/#features";

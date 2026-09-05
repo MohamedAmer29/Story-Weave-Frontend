@@ -13,7 +13,7 @@ export function Card({ children, className, interactive, ...rest }: CardProps) {
         "rounded-2xl border border-border bg-surface shadow-sm",
         interactive &&
           "transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-brand-500/40",
-        className
+        className,
       )}
       {...rest}
     >
@@ -22,7 +22,11 @@ export function Card({ children, className, interactive, ...rest }: CardProps) {
   );
 }
 
-export function CardHeader({ className, children, ...rest }: HTMLAttributes<HTMLDivElement>) {
+export function CardHeader({
+  className,
+  children,
+  ...rest
+}: HTMLAttributes<HTMLDivElement>) {
   return (
     <div className={cn("p-5 pb-3", className)} {...rest}>
       {children}
@@ -30,15 +34,23 @@ export function CardHeader({ className, children, ...rest }: HTMLAttributes<HTML
   );
 }
 
-export function CardBody({ className, children, ...rest }: HTMLAttributes<HTMLDivElement>) {
+export function CardBody({
+  className,
+  children,
+  ...rest
+}: HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={cn("p-5 pt-0", className)} {...rest}>
+    <div className={cn("p-5 pt-5 ", className)} {...rest}>
       {children}
     </div>
   );
 }
 
-export function CardFooter({ className, children, ...rest }: HTMLAttributes<HTMLDivElement>) {
+export function CardFooter({
+  className,
+  children,
+  ...rest
+}: HTMLAttributes<HTMLDivElement>) {
   return (
     <div className={cn("border-t border-border p-4", className)} {...rest}>
       {children}

@@ -1,7 +1,11 @@
 import { Route, Routes } from "react-router-dom";
 import { RootLayout } from "../layouts/RootLayout";
 import { AdminLayout } from "../layouts/AdminLayout";
-import { AdminRoute, GuestRoute, ProtectedRoute } from "../components/layout/guards";
+import {
+  AdminRoute,
+  GuestRoute,
+  ProtectedRoute,
+} from "../components/layout/guards";
 import { HomePage } from "../pages/HomePage";
 import { ExplorePage } from "../pages/ExplorePage";
 import { HowItWorksPage } from "../pages/HowItWorksPage";
@@ -23,46 +27,111 @@ export function AppRoutes() {
   return (
     <Routes>
       <Route element={<RootLayout />}>
-        <Route path="/" element={<HomePage />} />
+        <Route
+          path="/"
+          element={
+            <GuestRoute>
+              <HomePage />
+            </GuestRoute>
+          }
+        />
         <Route path="/explore" element={<ExplorePage />} />
         <Route path="/how-it-works" element={<HowItWorksPage />} />
-        <Route path="/login" element={<GuestRoute><LoginPage /></GuestRoute>} />
-        <Route path="/register" element={<GuestRoute><RegisterPage /></GuestRoute>} />
-        <Route path="/verify-email" element={<GuestRoute><VerifyEmailPage /></GuestRoute>} />
+        <Route
+          path="/login"
+          element={
+            <GuestRoute>
+              <LoginPage />
+            </GuestRoute>
+          }
+        />
+        <Route
+          path="/register"
+          element={
+            <GuestRoute>
+              <RegisterPage />
+            </GuestRoute>
+          }
+        />
+        <Route
+          path="/verify-email"
+          element={
+            <GuestRoute>
+              <VerifyEmailPage />
+            </GuestRoute>
+          }
+        />
         <Route path="/stories/:id" element={<StoryReaderPage />} />
 
         <Route
           path="/dashboard"
-          element={<ProtectedRoute><DashboardPage /></ProtectedRoute>}
+          element={
+            <ProtectedRoute>
+              <DashboardPage />
+            </ProtectedRoute>
+          }
         />
         <Route
           path="/library"
-          element={<ProtectedRoute><LibraryPage /></ProtectedRoute>}
+          element={
+            <ProtectedRoute>
+              <LibraryPage />
+            </ProtectedRoute>
+          }
         />
         <Route
           path="/create"
-          element={<ProtectedRoute><CreateStoryPage /></ProtectedRoute>}
+          element={
+            <ProtectedRoute>
+              <CreateStoryPage />
+            </ProtectedRoute>
+          }
         />
         <Route
           path="/stories/:id/edit"
-          element={<ProtectedRoute><EditStoryPage /></ProtectedRoute>}
+          element={
+            <ProtectedRoute>
+              <EditStoryPage />
+            </ProtectedRoute>
+          }
         />
         <Route
           path="/notifications"
-          element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>}
+          element={
+            <ProtectedRoute>
+              <NotificationsPage />
+            </ProtectedRoute>
+          }
         />
         <Route
           path="/profile"
-          element={<ProtectedRoute><ProfilePage /></ProtectedRoute>}
+          element={
+            <ProtectedRoute>
+              <ProfilePage />
+            </ProtectedRoute>
+          }
         />
         <Route
           path="/settings"
-          element={<ProtectedRoute><SettingsPage /></ProtectedRoute>}
+          element={
+            <ProtectedRoute>
+              <SettingsPage />
+            </ProtectedRoute>
+          }
         />
 
-        <Route element={<AdminRoute><AdminLayout /></AdminRoute>}>
+        <Route
+          element={
+            <AdminRoute>
+              <AdminLayout />
+            </AdminRoute>
+          }
+        >
           <Route path="/admin" element={<AdminPage />} />
-          <Route path="/admin/notifications" element={<AdminNotificationsPage />} />
+          <Route
+            path="/admin/notifications"
+            element={<AdminNotificationsPage />}
+          />
         </Route>
 
         <Route path="*" element={<NotFoundPage />} />

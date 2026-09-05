@@ -2,15 +2,10 @@ import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   Bell,
   ChevronDown,
-  LayoutDashboard,
-  Library,
-  LogOut,
   Menu as MenuIcon,
-  Plus,
   Settings,
-  User,
+  ShieldCheck,
   X,
-  Sparkles,
 } from "lucide-react";
 import { Logo } from "../ui/Logo";
 import { Button } from "../ui/Button";
@@ -68,6 +63,7 @@ export function Navbar() {
   const isFeaturesActive = isLandingPage && location.hash === "#features";
   const isExploreActive = location.pathname === "/explore";
   const isHowItWorksActive = location.pathname === "/how-it-works";
+  const showAdminGlobalControls = isAuthenticated && isAdmin;
 
   const handleLogout = async () => {
     dispatch(closeMobileNav());
@@ -82,12 +78,22 @@ export function Navbar() {
   };
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-canvas/80 backdrop-blur-xl">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center gap-8">
-          <Logo />
+    <header className="sticky top-0 z-40  border-b border-border bg-canvas/80 backdrop-blur-xl">
+      <div className="mx-auto flex h-20 w-full  items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
+        <div className="flex min-w-0 items-center justify-start gap-3 lg:gap-4">
+          <div className="shrink-0">
+            <Logo />
+          </div>
+
+          {showAdminGlobalControls && (
+            <span className="inline-flex shrink-0 items-center gap-2 rounded-full border border-brand-200 bg-brand-500/8 px-3 py-1.5 text-sm font-semibold text-brand-700 shadow-sm dark:border-brand-500/20 dark:bg-brand-500/10 dark:text-brand-300">
+              <ShieldCheck className="size-3.5" aria-hidden />
+              {t.nav.admin}
+            </span>
+          )}
+
           <nav
-            className="hidden items-center gap-1 lg:flex"
+            className="hidden min-w-0 items-center gap-1 lg:flex"
             aria-label="Primary"
           >
             {links.map((link) => {
@@ -144,7 +150,7 @@ export function Navbar() {
                 </NavLink>
               );
             })}
-            {isAdmin && (
+            {/* {isAdmin && (
               <NavLink
                 to="/admin"
                 className={({ isActive }) =>
@@ -158,11 +164,24 @@ export function Navbar() {
               >
                 {t.nav.admin}
               </NavLink>
-            )}
+            )} */}
           </nav>
         </div>
 
-        <div className="hidden items-center gap-2 lg:flex">
+        {/* <div className="hidden flex-1 items-center justify-start px-4 lg:flex">
+          {showAdminGlobalControls && (
+            <label className="flex w-full max-w-xl items-center gap-3 rounded-[22px] border border-border bg-surface px-4 py-3 text-fg-muted shadow-sm">
+              <Search className="size-4" aria-hidden />
+              <input
+                aria-label="Platform overview search"
+                className="w-full border-0 bg-transparent text-sm text-fg placeholder:text-fg-muted focus:outline-none"
+                placeholder="Platform Overview"
+              />
+            </label>
+          )}
+        </div> */}
+
+        <div className="hidden shrink-0 items-center justify-end gap-2 lg:flex">
           <LanguageSwitcher />
           <ThemeToggle compact />
           {!isAuthenticated && (
@@ -174,116 +193,76 @@ export function Navbar() {
             </>
           )}
           {isAuthenticated && (
-            <Dropdown
-              ariaLabel={t.nav.profile}
-              trigger={
-                <span className="flex items-center gap-1.5 rounded-lg px-1 py-1.5">
-                  {user?.avatarUrl ? (
-                    <img
-                      src={user.avatarUrl}
-                      alt={user.name ?? user.firstName ?? ""}
-                      loading="lazy"
-                      srcSet={
-                        buildResponsiveSrcSet(user.avatarUrl) ?? undefined
-                      }
-                      className="size-9 rounded-full border border-border object-cover"
-                    />
-                  ) : (
-                    <span className="flex size-9 items-center justify-center rounded-full bg-gradient-to-br from-brand-600 to-navy-800 text-sm font-bold text-white">
-                      {(user?.firstName?.[0] ?? "U").toUpperCase()}
+            <>
+              {showAdminGlobalControls && (
+                <button
+                  type="button"
+                  onClick={() => go("/notifications")}
+                  aria-label={t.nav.notifications}
+                  className="relative inline-flex size-11 items-center justify-center rounded-xl border border-border bg-surface text-fg transition-colors hover:border-brand-500/40"
+                >
+                  <Bell className="size-4" aria-hidden />
+                  {unreadCount && unreadCount > 0 ? (
+                    <span className="absolute -right-1 -top-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-brand-600 px-1 text-[10px] font-semibold text-white">
+                      {unreadCount > 9 ? "9+" : unreadCount}
                     </span>
-                  )}
-                  <ChevronDown className="size-4 text-fg-muted" />
-                </span>
-              }
-            >
-              {(close) => (
-                <>
-                  <div className="px-3 py-2">
-                    <p className="truncate text-sm font-semibold text-fg">
-                      {user?.name ?? user?.email}
-                    </p>
-                    <p className="truncate text-xs text-fg-muted">
-                      {user?.email}
-                    </p>
-                  </div>
-                  <div className="my-1 h-px bg-border" />
-                  <MenuItem
-                    onClick={() => {
-                      close();
-                      go("/dashboard");
-                    }}
-                  >
-                    <LayoutDashboard className="size-4" /> {t.nav.dashboard}
-                  </MenuItem>
-                  <MenuItem
-                    onClick={() => {
-                      close();
-                      go("/library");
-                    }}
-                  >
-                    <Library className="size-4" /> {t.nav.myStories}
-                  </MenuItem>
-                  <MenuItem
-                    onClick={() => {
-                      close();
-                      go("/create");
-                    }}
-                  >
-                    <Plus className="size-4" /> {t.nav.createStory}
-                  </MenuItem>
-                  <MenuItem
-                    onClick={() => {
-                      close();
-                      go("/notifications");
-                    }}
-                  >
-                    <Bell className="size-4" /> {t.nav.notifications}
-                    {unreadCount ? (
-                      <span className="ms-auto rounded-full bg-brand-600 px-1.5 py-0.5 text-xs font-bold text-white">
-                        {unreadCount}
+                  ) : null}
+                </button>
+              )}
+              <Dropdown
+                ariaLabel={t.nav.profile}
+                trigger={
+                  <span className="flex items-center gap-2 rounded-xl border border-border bg-surface px-2 py-1.5">
+                    {user?.avatarUrl ? (
+                      <img
+                        src={user.avatarUrl}
+                        alt={user.name ?? user.firstName ?? ""}
+                        loading="lazy"
+                        srcSet={
+                          buildResponsiveSrcSet(user.avatarUrl) ?? undefined
+                        }
+                        className="size-9 rounded-full border border-border object-cover"
+                      />
+                    ) : (
+                      <span className="flex size-9 items-center justify-center rounded-full bg-gradient-to-br from-brand-600 to-navy-800 text-sm font-bold text-white">
+                        {(user?.firstName?.[0] ?? "U").toUpperCase()}
                       </span>
-                    ) : null}
-                  </MenuItem>
-                  <MenuItem
-                    onClick={() => {
-                      close();
-                      go("/profile");
-                    }}
-                  >
-                    <User className="size-4" /> {t.nav.profile}
-                  </MenuItem>
-                  <MenuItem
-                    onClick={() => {
-                      close();
-                      go("/settings");
-                    }}
-                  >
-                    <Settings className="size-4" /> {t.nav.settings}
-                  </MenuItem>
-                  {isAdmin && (
+                    )}
+                    <span className="hidden min-w-0 sm:block">
+                      <span className="block truncate text-sm font-semibold text-fg">
+                        {user?.name ?? user?.email}
+                      </span>
+                      <span className="block text-[11px] uppercase tracking-[0.15em] text-fg-muted">
+                        {user?.role ?? "ADMIN"}
+                      </span>
+                    </span>
+                    <ChevronDown className="size-4 text-fg-muted" />
+                  </span>
+                }
+              >
+                {(close) => (
+                  <>
+                    <div className="px-3 py-2">
+                      <p className="truncate text-sm font-semibold text-fg">
+                        {user?.name ?? user?.email}
+                      </p>
+                      <p className="truncate text-xs text-fg-muted">
+                        {user?.email}
+                      </p>
+                    </div>
+                    <div className="my-1 h-px bg-border" />
                     <MenuItem
                       onClick={() => {
                         close();
-                        go("/admin");
+                        go("/settings");
                       }}
                     >
-                      <Sparkles className="size-4" /> {t.nav.admin}
+                      <Settings className="size-4" /> {t.nav.settings}
                     </MenuItem>
-                  )}
-                  <div className="my-1 h-px bg-border" />
-                  <MenuItem
-                    danger
-                    onClick={() => {
-                      close();
-                      void handleLogout();
-                    }}
-                  >
-                    <LogOut className="size-4" /> {t.nav.logout}
-                  </MenuItem>
-                </>
-              )}
-            </Dropdown>
+                  </>
+                )}
+              </Dropdown>
+            </>
           )}
         </div>
 

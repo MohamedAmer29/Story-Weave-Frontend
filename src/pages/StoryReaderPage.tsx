@@ -31,7 +31,10 @@ import { useLanguage } from "../i18n";
 import { useAppDispatch, useAppSelector } from "../store";
 import { setPage as savePage } from "../store/readerSlice";
 import { cn } from "../lib/cn";
-import { buildResponsiveSrcSet } from "../utils/imageSrcSet";
+import {
+  buildResponsiveSrcSet,
+  withImageCacheBust,
+} from "../utils/imageSrcSet";
 import type { IllustrationPageStatus } from "../api/types";
 
 const activeStatuses: IllustrationPageStatus[] = [
@@ -133,6 +136,12 @@ export function StoryReaderPage() {
   }
 
   const story = query.data;
+  const storyCoverSrc = story.cover.imageUrl
+    ? withImageCacheBust(story.cover.imageUrl, story.updatedAt)
+    : null;
+  const currentImageSrc = current.imageUrl
+    ? withImageCacheBust(current.imageUrl, story.updatedAt)
+    : null;
   const statusLabel = (s: IllustrationPageStatus | null) => {
     if (s === "COMPLETED") return t.reader.illustrationStatus.COMPLETED;
     if (s === "FAILED") return t.reader.illustrationStatus.FAILED;
@@ -169,14 +178,12 @@ export function StoryReaderPage() {
           <div className="mt-6 flex flex-col gap-8 lg:flex-row">
             <div className="mx-auto w-full max-w-xs shrink-0 lg:mx-0">
               <div className="relative aspect-[3/4] overflow-hidden rounded-2xl border border-border bg-surface shadow-xl">
-                {story.cover.imageUrl ? (
+                {storyCoverSrc ? (
                   <img
-                    src={story.cover.imageUrl}
+                    src={storyCoverSrc}
                     alt={story.title}
                     loading="lazy"
-                    srcSet={
-                      buildResponsiveSrcSet(story.cover.imageUrl) ?? undefined
-                    }
+                    srcSet={buildResponsiveSrcSet(storyCoverSrc) ?? undefined}
                     className="size-full object-cover"
                   />
                 ) : (
@@ -419,7 +426,7 @@ export function StoryReaderPage() {
                 <div className="grid grid-cols-1">
                   <article className="p-6 sm:p-10 lg:p-12" dir={dir}>
                     <div className="story-book-layout">
-                      {current.imageUrl ? (
+                      {currentImageSrc ? (
                         <figure
                           className={cn(
                             "story-book-figure cursor-pointer",
@@ -427,12 +434,10 @@ export function StoryReaderPage() {
                               ? "story-book-figure-rtl"
                               : "story-book-figure-ltr",
                           )}
-                          onClick={() =>
-                            setExpandedImage(current.imageUrl ?? null)
-                          }
+                          onClick={() => setExpandedImage(currentImageSrc)}
                         >
                           <img
-                            src={current.imageUrl}
+                            src={currentImageSrc}
                             alt=""
                             loading="lazy"
                             className="mx-auto max-h-[28rem] rounded-xl border border-border object-contain shadow-lg transition-transform duration-200 hover:scale-[1.02]"

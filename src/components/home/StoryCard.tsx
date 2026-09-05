@@ -4,7 +4,10 @@ import { Card } from "../ui/Card";
 import { StatusBadge, VisibilityBadge } from "../ui/badgeHelpers";
 import { useLanguage } from "../../i18n";
 import type { StoryLibraryItem, StoryResponse } from "../../api/types";
-import { buildResponsiveSrcSet } from "../../utils/imageSrcSet";
+import {
+  buildResponsiveSrcSet,
+  withImageCacheBust,
+} from "../../utils/imageSrcSet";
 
 interface StoryCardProps {
   story: StoryLibraryItem | StoryResponse;
@@ -17,6 +20,7 @@ export function StoryCard({ story, authorName, footer }: StoryCardProps) {
 
   const cover = (story as StoryLibraryItem).coverImageUrl;
   const isItem = "coverImageUrl" in story;
+  const coverSrc = cover ? withImageCacheBust(cover, story.updatedAt) : null;
 
   return (
     <Card interactive className="group flex flex-col overflow-hidden">
@@ -25,17 +29,17 @@ export function StoryCard({ story, authorName, footer }: StoryCardProps) {
         className="block"
         aria-label={story.title}
       >
-        <div className="relative aspect-[3/2] overflow-hidden bg-surface-2">
-          {cover ? (
+        <div className="relative aspect-[3/2] overflow-hidden  pt-6 bg-surface ">
+          {coverSrc ? (
             <img
-              src={cover}
+              src={coverSrc}
               alt={story.title}
               loading="lazy"
-              srcSet={buildResponsiveSrcSet(cover) ?? undefined}
-              className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
+              srcSet={buildResponsiveSrcSet(coverSrc) ?? undefined}
+              className="size-full object-cover transition-transform duration-500 group-hover:scale-105 rounded-t-2xl"
             />
           ) : (
-            <div className="flex size-full items-center justify-center bg-gradient-to-br from-brand-600/15 to-navy-800/20 text-fg-faint">
+            <div className="flex size-full items-center justify-center bg-gradient-to-br from-brand-600/15 to-navy-800/20 text-fg-faint transition-colors group-hover:text-brand-600 dark:group-hover:text-brand-400">
               {isItem ? (
                 <ImageIcon className="size-10" aria-hidden />
               ) : (
