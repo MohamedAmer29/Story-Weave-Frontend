@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="StoryForge AI - Turn your stories into worlds with AI-powered illustrated storytelling." />
+    <meta property="og:title" content="StoryForge AI" />
+    <meta property="og:description" content="Turn your stories into worlds with AI-powered illustrated storytelling." />
+    <meta property="og:type" content="website" />
+    <title>StoryForge AI — Turn your stories into worlds</title>
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem("theme");
+          var pref = t === "light" || t === "dark" || t === "system" ? t : "system";
+          var dark =
+            pref === "dark" ||
+            (pref === "system" &&
+              window.matchMedia("(prefers-color-scheme: dark)").matches);
+          if (dark) document.documentElement.classList.add("dark");
+          var l = localStorage.getItem("language");
+          var lang = l === "ar" ? "ar" : l === "en" ? "en" : null;
+          if (!lang) {
+            var nav = navigator.languages || [navigator.language];
+            for (var i = 0; i < nav.length; i++) {
+              var lc = (nav[i] || "").toLowerCase();
+              if (lc.indexOf("ar") === 0) { lang = "ar"; break; }
+            }
+            if (!lang) {
+              var nav2 = navigator.languages || [navigator.language];
+              for (var j = 0; j < nav2.length; j++) {
+                var lc2 = (nav2[j] || "").toLowerCase();
+                if (lc2.indexOf("en") === 0) { lang = "en"; break; }
+              }
+            }
+            lang = lang || "en";
+          }
+          document.documentElement.setAttribute("lang", lang);
+          document.documentElement.setAttribute("dir", lang === "ar" ? "rtl" : "ltr");
+        } catch (e) {}
+      })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Cairo:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700;800&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

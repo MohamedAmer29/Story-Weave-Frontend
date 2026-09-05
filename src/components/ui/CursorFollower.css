@@ -1,0 +1,19 @@
+.cursor-glyph {
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.cursor-glyph polygon {
+  transition: opacity 0.2s ease;
+}
+
+.cursor-glyph path {
+  transition: opacity 0.2s ease;
+}
+
+/* Reduce motion - hide custom cursor */
+@media (prefers-reduced-motion: reduce) {
+  .cursor-follower {
+    display: none !important;
+  }
+}
