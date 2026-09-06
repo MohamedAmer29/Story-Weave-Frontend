@@ -54,10 +54,10 @@ export const storiesApi = {
   get: (id: string) => api.get<StoryDetails>(`/stories/${id}`).then((r) => r.data),
 
   myStories: (query: StoryQuery = {}) =>
-    api.get<PaginatedStories>("/stories/my", { params: query }).then((r) => r.data),
+    api.get<PaginatedStories & { data: StoryLibraryItem[] }>("/stories/my", { params: query }).then((r) => r.data),
 
   sharedStories: (query: StoryQuery = {}) =>
-    api.get<PaginatedStories>("/stories/shared", { params: query }).then((r) => r.data),
+    api.get<PaginatedStories & { data: StoryLibraryItem[] }>("/stories/shared", { params: query }).then((r) => r.data),
 
   publicStories: (query: PublicStoryQuery = {}) =>
     api.get<PaginatedStories>("/stories/public", { params: query }).then((r) => r.data),

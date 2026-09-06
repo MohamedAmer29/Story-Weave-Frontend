@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -11,6 +11,31 @@ import { Logo } from "../components/ui/Logo";
 import { getErrorMessage } from "../api/axios";
 import { useAuth } from "../hooks/useAuth";
 import { useLanguage } from "../i18n";
+import { Reveal } from "../components/motion/Reveal";
+
+function AuthFrame({ children }: { children: ReactNode }) {
+  const { t } = useLanguage();
+  return (
+    <div className="relative isolate min-h-[calc(100svh-4.5rem)] overflow-hidden">
+      <div className="hero-aurora absolute inset-0" aria-hidden />
+      <div className="page-grain pointer-events-none absolute inset-0" aria-hidden />
+      <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-4 py-12 lg:grid-cols-[1.05fr_0.95fr] lg:px-8 lg:py-16">
+        <div className="hidden lg:block">
+          <p className="inline-flex items-center gap-2 rounded-full border border-brand-500/20 bg-brand-500/8 px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.2em] text-brand-700">
+            {t.brand.name}
+          </p>
+          <p className="mt-5 font-display text-5xl font-semibold leading-[0.95] tracking-[-0.04em] text-fg">
+            {t.hero.title}
+          </p>
+          <p className="mt-5 max-w-md text-lg leading-relaxed text-fg-muted">
+            {t.hero.subtitle}
+          </p>
+        </div>
+        <Reveal y={24}>{children}</Reveal>
+      </div>
+    </div>
+  );
+}
 
 interface LoginForm {
   email: string;
@@ -49,13 +74,13 @@ export function LoginPage() {
   });
 
   return (
-    <div className="hero-aurora flex min-h-[calc(100vh-4rem)] items-center justify-center px-4 py-12">
+    <AuthFrame>
       <Helmet>
         <title>
           {t.nav.login} · {t.brand.name}
         </title>
       </Helmet>
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-md lg:ms-auto">
         <CardHeader>
           <div className="flex flex-col items-center gap-3 text-center">
             <Logo />
@@ -118,6 +143,12 @@ export function LoginPage() {
                   />
                   {t.auth.rememberMe}
                 </label>
+                <Link
+                  to="/forgot-password"
+                  className="text-sm font-medium text-brand-600 hover:underline dark:text-brand-400"
+                >
+                  {t.auth.forgotPassword}
+                </Link>
               </div>
             </div>
 
@@ -137,7 +168,7 @@ export function LoginPage() {
           </p>
         </CardBody>
       </Card>
-    </div>
+    </AuthFrame>
   );
 }
 
@@ -173,7 +204,7 @@ export function RegisterPage() {
         password: values.password,
       });
       toast.success(t.auth.registerSuccess);
-      navigate("/dashboard", { replace: true });
+      navigate(`/verify-email-otp?email=${encodeURIComponent(values.email)}`, { replace: true });
     } catch (err) {
       toast.error(getErrorMessage(err) ?? t.common.error);
     }
@@ -183,13 +214,13 @@ export function RegisterPage() {
     /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,}$/;
 
   return (
-    <div className="hero-aurora flex min-h-[calc(100vh-4rem)] items-center justify-center px-4 py-12">
+    <AuthFrame>
       <Helmet>
         <title>
           {t.nav.register} · {t.brand.name}
         </title>
       </Helmet>
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-md lg:ms-auto">
         <CardHeader>
           <div className="flex flex-col items-center gap-3 text-center">
             <Logo />
@@ -310,6 +341,6 @@ export function RegisterPage() {
           </p>
         </CardBody>
       </Card>
-    </div>
+    </AuthFrame>
   );
 }

@@ -7,10 +7,12 @@ import { FileUp, MapPin, Sparkles } from "lucide-react";
 import { storiesApi } from "../api/storiesApi";
 import { Card, CardBody, CardHeader } from "../components/ui/Card";
 import { Input, Select, Textarea } from "../components/ui/field";
+import { CivilizationSelect } from "../components/ui/CivilizationSelect";
 import { Button } from "../components/ui/Button";
 import { getErrorMessage } from "../api/axios";
 import { useLanguage } from "../i18n";
 import { cn } from "../lib/cn";
+import { isCustomCivilization } from "../constants/civilizations";
 import type { StoryCivilization, StoryEra, StoryTheme, StoryType } from "../api/types";
 
 interface CreateForm {
@@ -30,6 +32,8 @@ interface CreateForm {
   visibility: "PUBLIC" | "PRIVATE" | "SHARED";
 }
 
+const languages: string[] = ["ARABIC", "ENGLISH"];
+
 const storyTypes: StoryType[] = [
   "FANTASY",
   "ADVENTURE",
@@ -47,7 +51,6 @@ const storyTypes: StoryType[] = [
 ];
 
 const eras: StoryEra[] = ["BCE", "CE", "MODERN", "UNSPECIFIED"];
-const civilizations: StoryCivilization[] = ["UNSPECIFIED", "ANCIENT_EGYPTIAN", "EGYPTIAN", "ARABIC", "GREEK", "ROMAN", "CUSTOM"];
 const themes: StoryTheme[] = ["UNSPECIFIED", "FANTASY", "HISTORICAL", "ADVENTURE", "ROMANCE", "MYSTERY", "WAR", "HORROR", "COMEDY", "DRAMA", "MYTHOLOGY", "RELIGIOUS", "CUSTOM"];
 
 function humanize(value: string): string {
@@ -102,7 +105,7 @@ export function CreateStoryPage() {
       location: values.location || undefined,
       civilization: values.civilization === "UNSPECIFIED" ? undefined : values.civilization,
       customCivilization:
-        values.civilization === "CUSTOM" ? values.customCivilization : undefined,
+        isCustomCivilization(values.civilization) ? values.customCivilization : undefined,
       theme: values.theme === "UNSPECIFIED" ? undefined : values.theme,
       customTheme: values.theme === "CUSTOM" ? values.customTheme : undefined,
     });
@@ -124,7 +127,7 @@ export function CreateStoryPage() {
       location: values.location || undefined,
       civilization: values.civilization === "UNSPECIFIED" ? undefined : values.civilization,
       customCivilization:
-        values.civilization === "CUSTOM" ? values.customCivilization : undefined,
+        isCustomCivilization(values.civilization) ? values.customCivilization : undefined,
       theme: values.theme === "UNSPECIFIED" ? undefined : values.theme,
       customTheme: values.theme === "CUSTOM" ? values.customTheme : undefined,
     });
@@ -157,18 +160,13 @@ export function CreateStoryPage() {
               </option>
             ))}
           </Select>
-          <Select
+          <CivilizationSelect
             label={t.create.civilization}
             value={civilization}
-            onChange={(e) => setValue("civilization", e.target.value as StoryCivilization)}
-          >
-            {civilizations.map((c) => (
-              <option key={c} value={c}>
-                {c === "UNSPECIFIED" ? "—" : humanize(c)}
-              </option>
-            ))}
-          </Select>
-          {civilization === "CUSTOM" && (
+            onChange={(v) => setValue("civilization", v)}
+            searchPlaceholder={t.create.civilizationSearch}
+          />
+          {isCustomCivilization(civilization) && (
             <Input label={t.create.customCivilization} placeholder={t.create.customCivilization} {...register("customCivilization")} />
           )}
           <Select label={t.create.theme} value={theme} onChange={(e) => setValue("theme", e.target.value as StoryTheme)}>
@@ -252,16 +250,26 @@ export function CreateStoryPage() {
                   placeholder={t.create.descriptionPh}
                   {...register("description")}
                 />
-                <Input
+                <Select
                   label={t.create.language}
-                  placeholder={t.common.english}
-                  {...register("language")}
-                />
+                  value={watch("language")}
+                  onChange={(e) => setValue("language", e.target.value)}
+                >
+                  <option value="">—</option>
+                  {languages.map((lang) => (
+                    <option key={lang} value={lang}>
+                      {lang === "ARABIC" ? t.common.arabic : t.common.english}
+                    </option>
+                  ))}
+                </Select>
                 <Input
                   label={t.create.visualStyle}
                   placeholder={t.create.visualStylePh}
                   {...register("visualStyle")}
                 />
+                <p className="text-sm text-fg-muted">
+                  Story language is for reading and narration. It does not control the image style, culture, or setting.
+                </p>
 
                 {tab === "write" ? (
                   <Textarea

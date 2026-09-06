@@ -17,21 +17,27 @@ export const api = axios.create({
 
 let refreshPromise: Promise<string | null> | null = null;
 
-async function requestRefresh(): Promise<string | null> {
-  try {
-    const res = await axios.post(
-      `${API_URL}/auth/refresh-token`,
-      {},
-      { withCredentials: true }
-    );
-    const token: string | null = res.data?.accessToken ?? null;
-    if (token) {
-      store.dispatch(setToken(token));
+export async function requestRefresh(): Promise<string | null> {
+  if (refreshPromise) return refreshPromise;
+  refreshPromise = (async () => {
+    try {
+      const res = await axios.post(
+        `${API_URL}/auth/refresh-token`,
+        {},
+        { withCredentials: true }
+      );
+      const token: string | null = res.data?.accessToken ?? null;
+      if (token) {
+        store.dispatch(setToken(token));
+      }
+      return token;
+    } catch {
+      return null;
+    } finally {
+      refreshPromise = null;
     }
-    return token;
-  } catch {
-    return null;
-  }
+  })();
+  return refreshPromise;
 }
 
 api.interceptors.request.use((config) => {
@@ -48,14 +54,17 @@ api.interceptors.response.use(
     const original = error.config as RetriableRequestConfig | undefined;
     const isAuthRefresh = original?.url?.includes("/auth/refresh-token");
     const status = error.response?.status;
+    const errorData = error.response?.data as any;
+    const errorCode = errorData?.errorCode;
+
+    if (errorCode === "ACCESS_TOKEN_INVALIDATED") {
+      store.dispatch(clearCredentials());
+      return Promise.reject(error);
+    }
 
     if (status === 401 && original && !isAuthRefresh && !original.headers._retry) {
       original.headers._retry = true;
-      if (refreshPromise === null) {
-        refreshPromise = requestRefresh();
-      }
-      const token = await refreshPromise;
-      refreshPromise = null;
+      const token = await requestRefresh();
       if (token) {
         original.headers.Authorization = `Bearer ${token}`;
         return api(original);

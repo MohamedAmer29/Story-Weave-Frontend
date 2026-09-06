@@ -7,12 +7,15 @@ import { toast } from "react-toastify";
 import { storiesApi } from "../api/storiesApi";
 import { Card, CardBody, CardHeader } from "../components/ui/Card";
 import { Input, Select, Textarea } from "../components/ui/field";
+import { CivilizationSelect } from "../components/ui/CivilizationSelect";
 import { Button } from "../components/ui/Button";
 import { PageLoader } from "../components/ui/Skeleton";
+import { useContentLoading } from "../layouts/PageLoading";
 import { ErrorState } from "../components/ui/States";
 import { getErrorMessage } from "../api/axios";
 import { useAuth } from "../hooks/useAuth";
 import { useLanguage } from "../i18n";
+import { isCustomCivilization } from "../constants/civilizations";
 import type {
   StoryCivilization,
   StoryEra,
@@ -37,15 +40,7 @@ const storyTypes: StoryType[] = [
   "THRILLER",
 ];
 const eras: StoryEra[] = ["BCE", "CE", "MODERN", "UNSPECIFIED"];
-const civilizations: StoryCivilization[] = [
-  "UNSPECIFIED",
-  "ANCIENT_EGYPTIAN",
-  "EGYPTIAN",
-  "ARABIC",
-  "GREEK",
-  "ROMAN",
-  "CUSTOM",
-];
+const languages: string[] = ["ARABIC", "ENGLISH"];
 const themes: StoryTheme[] = [
   "UNSPECIFIED",
   "FANTASY",
@@ -165,7 +160,7 @@ export function EditStoryPage() {
             ? undefined
             : values.civilization,
         customCivilization:
-          values.civilization === "CUSTOM"
+          isCustomCivilization(values.civilization)
             ? values.customCivilization
             : undefined,
         theme: values.theme === "UNSPECIFIED" ? undefined : values.theme,
@@ -189,6 +184,8 @@ export function EditStoryPage() {
       setSaving(false);
     }
   });
+
+  useContentLoading(query.isLoading);
 
   if (query.isLoading) {
     return (
@@ -266,12 +263,26 @@ export function EditStoryPage() {
                 {...register("description")}
               />
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Input label={t.create.language} {...register("language")} />
+                <Select
+                  label={t.create.language}
+                  value={watch("language")}
+                  onChange={(e) => setValue("language", e.target.value)}
+                >
+                  <option value="">—</option>
+                  {languages.map((lang) => (
+                    <option key={lang} value={lang}>
+                      {lang === "ARABIC" ? t.common.arabic : t.common.english}
+                    </option>
+                  ))}
+                </Select>
                 <Input
                   label={t.create.visualStyle}
                   {...register("visualStyle")}
                 />
               </div>
+              <p className="text-sm text-fg-muted">
+                Story language is for reading and narration. It does not control the image style, culture, or setting.
+              </p>
             </CardBody>
           </Card>
 
@@ -300,23 +311,13 @@ export function EditStoryPage() {
                     </option>
                   ))}
                 </Select>
-                <Select
+                <CivilizationSelect
                   label={t.create.civilization}
                   value={watch("civilization")}
-                  onChange={(e) =>
-                    setValue(
-                      "civilization",
-                      e.target.value as StoryCivilization,
-                    )
-                  }
-                >
-                  {civilizations.map((c) => (
-                    <option key={c} value={c}>
-                      {c === "UNSPECIFIED" ? "—" : humanize(c)}
-                    </option>
-                  ))}
-                </Select>
-                {civilization === "CUSTOM" && (
+                  onChange={(v) => setValue("civilization", v)}
+                  searchPlaceholder={t.create.civilizationSearch}
+                />
+                {isCustomCivilization(civilization) && (
                   <Input
                     label={t.create.customCivilization}
                     {...register("customCivilization")}
@@ -342,6 +343,9 @@ export function EditStoryPage() {
                   />
                 )}
               </div>
+              <p className="mt-4 text-sm text-fg-muted">
+                Use the story text for the scene. Era, location, civilization, and theme only shape the visual world around it.
+              </p>
             </CardBody>
           </Card>
 

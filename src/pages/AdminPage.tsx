@@ -16,6 +16,7 @@ import { Badge } from "../components/ui/Badge";
 import { Card, CardBody, CardHeader } from "../components/ui/Card";
 import { PageLoader, Skeleton } from "../components/ui/Skeleton";
 import { ErrorState } from "../components/ui/States";
+import { useContentLoading } from "../layouts/PageLoading";
 import { useLanguage } from "../i18n";
 import { cn } from "../lib/cn";
 import { AdminUsersTab } from "./admin/AdminUsersTab";
@@ -163,6 +164,8 @@ export function AdminOverviewTab() {
     queryKey: ["admin", "health"],
     queryFn: adminApi.health,
   });
+
+  useContentLoading(query.isLoading || queue.isLoading);
 
   if (query.isLoading) return <PageLoader />;
   if (query.isError || !query.data) {

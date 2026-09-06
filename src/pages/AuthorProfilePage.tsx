@@ -8,6 +8,7 @@ import { Badge } from "../components/ui/Badge";
 import { Avatar } from "../components/ui/Avatar";
 import { EmptyState, ErrorState } from "../components/ui/States";
 import { PageLoader } from "../components/ui/Skeleton";
+import { useContentLoading } from "../layouts/PageLoading";
 import { Pagination } from "../components/ui/Pagination";
 import { useLanguage } from "../i18n";
 import { cn } from "../lib/cn";
@@ -27,6 +28,8 @@ export function AuthorProfilePage() {
     queryFn: () => usersApi.getPublicStories(userId!, { page: 1, limit: 10 }),
     enabled: !!userId,
   });
+
+  useContentLoading(!!userId && (profileQuery.isLoading || storiesQuery.isLoading));
 
   if (!userId) return null;
 

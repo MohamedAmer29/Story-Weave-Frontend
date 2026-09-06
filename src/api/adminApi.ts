@@ -4,6 +4,7 @@ import type {
   AdminStory,
   AdminUser,
   AiUsage,
+  AuditEntry,
   PaginationMeta,
   QueueStats,
   SystemHealth,
@@ -20,6 +21,12 @@ export interface AdminQuery {
   visibility?: string;
   sourceType?: string;
   userId?: string;
+}
+
+export interface Paginated<T> {
+  success: boolean;
+  data: T[];
+  meta: PaginationMeta;
 }
 
 export const adminApi = {
@@ -105,7 +112,7 @@ export const adminApi = {
 
   audit: (query: AdminQuery = {}) =>
     api
-      .get<{ success: boolean; data: unknown[]; meta: PaginationMeta }>("/admin/system/audit", {
+      .get<Paginated<AuditEntry>>("/admin/system/audit", {
         params: query,
       })
       .then((r) => r.data),

@@ -10,6 +10,7 @@ import { Card, CardBody, CardHeader } from "../components/ui/Card";
 import { Input } from "../components/ui/field";
 import { Button } from "../components/ui/Button";
 import { PageLoader } from "../components/ui/Skeleton";
+import { useContentLoading } from "../layouts/PageLoading";
 import { ErrorState } from "../components/ui/States";
 import { getErrorMessage } from "../api/axios";
 import { useAuth } from "../hooks/useAuth";
@@ -110,6 +111,8 @@ export function ProfilePage() {
     }
     await changePassword.mutateAsync(v);
   });
+
+  useContentLoading(profileQuery.isLoading);
 
   if (profileQuery.isLoading)
     return (
@@ -308,7 +311,7 @@ export function ProfilePage() {
                     <button
                       type="button"
                       onClick={() => setShowPassword((v) => !v)}
-                      className="absolute end-3 top-[2.35rem] -translate-y-1/2 text-fg-faint hover:text-fg"
+                      className="absolute end-3 top-[2.9rem] -translate-y-1/2 text-fg-faint hover:text-fg"
                       aria-label={
                         showPassword ? t.common.close : t.common.search
                       }

@@ -2,12 +2,15 @@ import type { ReactNode } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { PageLoader } from "../ui/Skeleton";
 import { useAppSelector } from "../../store";
+import { useContentLoading } from "../../layouts/PageLoading";
 
 export function ProtectedRoute({ children }: { children: ReactNode }) {
   const { token, user, status } = useAppSelector((state) => state.auth);
   const location = useLocation();
+  const loading = status === "idle" || status === "loading" || Boolean(token && !user);
+  useContentLoading(loading);
 
-  if (status === "idle" || (token && !user)) {
+  if (loading) {
     return <PageLoader label="Loading" />;
   }
 
@@ -21,8 +24,10 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
 export function GuestRoute({ children }: { children: ReactNode }) {
   const { token, user, status } = useAppSelector((state) => state.auth);
   const location = useLocation();
+  const loading = status === "idle" || status === "loading" || Boolean(token && !user);
+  useContentLoading(loading);
 
-  if (status === "idle" || (token && !user)) {
+  if (loading) {
     return <PageLoader label="Loading" />;
   }
 
@@ -36,8 +41,10 @@ export function GuestRoute({ children }: { children: ReactNode }) {
 export function AdminRoute({ children }: { children: ReactNode }) {
   const { token, user, status } = useAppSelector((state) => state.auth);
   const location = useLocation();
+  const loading = status === "idle" || status === "loading" || Boolean(token && !user);
+  useContentLoading(loading);
 
-  if (status === "idle" || (token && !user)) {
+  if (loading) {
     return <PageLoader label="Loading" />;
   }
 

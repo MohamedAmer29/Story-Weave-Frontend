@@ -1,12 +1,13 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useGSAP } from "@gsap/react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { Plus, Search, Trash2, BookOpen } from "lucide-react";
 import { usersApi } from "../api/usersApi";
 import { storiesApi } from "../api/storiesApi";
-import type { StoryType } from "../api/types";
+import type { StoryLibraryItem, StoryResponse, StoryType } from "../api/types";
 import { StoryCard } from "../components/home/StoryCard";
 import { SkeletonGrid } from "../components/ui/Skeleton";
 import { EmptyState } from "../components/ui/States";
@@ -17,8 +18,9 @@ import { Modal } from "../components/ui/Modal";
 import { getErrorMessage } from "../api/axios";
 import { useLanguage } from "../i18n";
 import { cn } from "../lib/cn";
+import { gsap, prefersReducedMotion, revealEase } from "../lib/gsap";
 
-type Tab = "mine" | "shared";
+type Tab = "mine" | "shared" | "public";
 
 export function LibraryPage() {
   const { t } = useLanguage();
@@ -31,11 +33,12 @@ export function LibraryPage() {
   const [visibility, setVisibility] = useState("");
   const [storyType, setStoryType] = useState<"" | StoryType>("");
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
+  const rootRef = useRef<HTMLElement>(null);
 
   const mineQuery = useQuery({
     queryKey: ["library", "mine", { page, search, status, visibility, storyType }],
     queryFn: () =>
-      storiesApi.myStories({
+      usersApi.myStories({
         page,
         limit: 9,
         search: search || undefined,
@@ -52,8 +55,20 @@ export function LibraryPage() {
     enabled: tab === "shared",
   });
 
-  const activeQuery = tab === "mine" ? mineQuery : sharedQuery;
-  const stories = activeQuery.data?.data ?? [];
+  const publicQuery = useQuery({
+    queryKey: ["library", "public", { page, search, storyType }],
+    queryFn: () =>
+      storiesApi.publicStories({
+        page,
+        limit: 9,
+        search: search || undefined,
+      }),
+    enabled: tab === "public",
+  });
+
+  const activeQuery =
+    tab === "mine" ? mineQuery : tab === "shared" ? sharedQuery : publicQuery;
+  const stories = (activeQuery.data?.data ?? []) as Array<StoryLibraryItem | StoryResponse>;
   const meta = activeQuery.data?.meta;
 
   const deleteMutation = useMutation({
@@ -77,6 +92,20 @@ export function LibraryPage() {
 
   const filtersActive = Boolean(search || status || visibility || storyType);
 
+  useGSAP(
+    () => {
+      if (prefersReducedMotion()) return;
+      const items = rootRef.current?.querySelectorAll("[data-page-reveal]");
+      if (!items?.length) return;
+      gsap.fromTo(
+        items,
+        { y: 22, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.75, stagger: 0.06, ease: revealEase },
+      );
+    },
+    { scope: rootRef, dependencies: [tab, page, search, status, visibility, storyType] },
+  );
+
   return (
     <>
       <Helmet>
@@ -84,11 +113,11 @@ export function LibraryPage() {
           {t.library.title} · {t.brand.name}
         </title>
       </Helmet>
-      <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+      <section ref={rootRef} className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+        <div data-page-reveal className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div>
-            <h1 className="font-display text-3xl font-bold text-fg sm:text-4xl">{t.library.title}</h1>
-            <p className="mt-2 text-fg-muted">{t.library.subtitle}</p>
+            <h1 className="font-display text-3xl font-bold text-display-tight text-fg sm:text-4xl">{t.library.title}</h1>
+            <p className="mt-2 text-copy-rhythm text-fg-muted">{t.library.subtitle}</p>
           </div>
           <Button onClick={() => navigate("/create")}>
             <Plus className="size-4" aria-hidden />
@@ -96,7 +125,7 @@ export function LibraryPage() {
           </Button>
         </div>
 
-        <div className="mt-6 flex flex-col gap-3 lg:flex-row lg:items-center">
+        <div data-page-reveal className="mt-6 flex flex-col gap-3 lg:flex-row lg:items-center">
           <div className="flex rounded-lg border border-border bg-surface p-1" role="tablist" aria-label="Library tabs">
             <button
               role="tab"
@@ -125,6 +154,20 @@ export function LibraryPage() {
               )}
             >
               {t.library.sharedTitle}
+            </button>
+            <button
+              role="tab"
+              aria-selected={tab === "public"}
+              onClick={() => {
+                setTab("public");
+                setPage(1);
+              }}
+              className={cn(
+                "rounded-md px-4 py-2 text-sm font-medium transition-colors",
+                tab === "public" ? "bg-brand-600 text-white" : "text-fg-muted hover:text-fg"
+              )}
+            >
+              {t.explore.title}
             </button>
           </div>
 
@@ -196,7 +239,7 @@ export function LibraryPage() {
           )}
         </div>
 
-        <div className="mt-8">
+        <div data-page-reveal className="mt-8">
           {activeQuery.isLoading ? (
             <SkeletonGrid count={6} />
           ) : activeQuery.isError ? (
@@ -204,7 +247,7 @@ export function LibraryPage() {
           ) : stories.length === 0 ? (
             <EmptyState
               icon={<BookOpen className="size-6" />}
-              title={tab === "mine" ? t.library.empty : t.library.sharedEmpty}
+              title={tab === "mine" ? t.library.empty : tab === "shared" ? t.library.sharedEmpty : t.explore.empty}
               description={tab === "mine" ? t.library.emptyHint : undefined}
               action={
                 filtersActive ? (

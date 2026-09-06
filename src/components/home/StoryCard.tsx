@@ -1,11 +1,15 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { BookOpen, Image as ImageIcon } from "lucide-react";
 import { Card } from "../ui/Card";
 import { StatusBadge, VisibilityBadge } from "../ui/badgeHelpers";
 import { useLanguage } from "../../i18n";
+import { storiesApi } from "../../api/storiesApi";
 import type { StoryLibraryItem, StoryResponse } from "../../api/types";
 import {
   buildResponsiveSrcSet,
+  resolveImageUrl,
   withImageCacheBust,
 } from "../../utils/imageSrcSet";
 
@@ -15,37 +19,86 @@ interface StoryCardProps {
   footer?: React.ReactNode;
 }
 
+function CoverPlaceholder({ isItem }: { isItem: boolean }) {
+  return (
+    <div className="flex size-full items-center justify-center bg-gradient-to-br from-brand-600/15 to-navy-800/20 text-fg-faint transition-colors group-hover:text-brand-600 dark:group-hover:text-brand-400">
+      {isItem ? (
+        <ImageIcon className="size-10" aria-hidden />
+      ) : (
+        <BookOpen className="size-10" aria-hidden />
+      )}
+    </div>
+  );
+}
+
+function CardCover({
+  src,
+  alt,
+  isItem,
+}: {
+  src: string;
+  alt: string;
+  isItem: boolean;
+}) {
+  const [broken, setBroken] = useState(false);
+
+  if (broken) return <CoverPlaceholder isItem={isItem} />;
+
+  return (
+    <img
+      src={src}
+      alt={alt}
+      loading="lazy"
+      srcSet={buildResponsiveSrcSet(src) ?? undefined}
+      onError={() => setBroken(true)}
+      className="size-full object-cover transition-transform duration-700 group-hover:scale-[1.06]"
+    />
+  );
+}
+
 export function StoryCard({ story, authorName, footer }: StoryCardProps) {
   const { t } = useLanguage();
 
-  const cover = (story as StoryLibraryItem).coverImageUrl;
-  const isItem = "coverImageUrl" in story;
-  const coverSrc = cover ? withImageCacheBust(cover, story.updatedAt) : null;
+  const anyStory = story as unknown as Record<string, unknown>;
+  const coverField =
+    anyStory.coverImageUrl ??
+    (anyStory.cover as { imageUrl?: string } | undefined)?.imageUrl ??
+    anyStory.coverImage ??
+    anyStory.imageUrl ??
+    anyStory.thumbnail;
+  const cover = resolveImageUrl(coverField as string | undefined);
+  const isItem = "illustratedPages" in story;
+  const coverSrc = cover
+    ? withImageCacheBust(cover, story.updatedAt as string | number)
+    : null;
+
+  const { data: fallbackCover } = useQuery({
+    queryKey: ["story", "cover", story.id],
+    queryFn: () =>
+      storiesApi.get(story.id).then((d) => {
+        const coverUrl = d.cover.imageUrl ?? null;
+        return coverUrl
+          ? withImageCacheBust(resolveImageUrl(coverUrl), d.updatedAt)
+          : null;
+      }),
+    enabled: isItem && !coverSrc,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const imageSrc = coverSrc ?? fallbackCover ?? null;
 
   return (
-    <Card interactive className="group flex flex-col overflow-hidden">
+    <Card interactive className="story-card group flex flex-col overflow-hidden">
       <Link
         to={`/stories/${story.id}`}
         className="block"
         aria-label={story.title}
       >
-        <div className="relative aspect-[3/2] overflow-hidden  pt-6 bg-surface ">
-          {coverSrc ? (
-            <img
-              src={coverSrc}
-              alt={story.title}
-              loading="lazy"
-              srcSet={buildResponsiveSrcSet(coverSrc) ?? undefined}
-              className="size-full object-cover transition-transform duration-500 group-hover:scale-105 rounded-t-2xl"
-            />
+        <div className="relative aspect-[3/2] overflow-hidden bg-surface-2">
+          {imageSrc ? (
+            <CardCover key={imageSrc} src={imageSrc} alt={story.title} isItem={isItem} />
           ) : (
-            <div className="flex size-full items-center justify-center bg-gradient-to-br from-brand-600/15 to-navy-800/20 text-fg-faint transition-colors group-hover:text-brand-600 dark:group-hover:text-brand-400">
-              {isItem ? (
-                <ImageIcon className="size-10" aria-hidden />
-              ) : (
-                <BookOpen className="size-10" aria-hidden />
-              )}
-            </div>
+            <CoverPlaceholder isItem={isItem} />
           )}
           <div className="absolute start-3 top-3 flex gap-2">
             <StatusBadge status={story.status} />

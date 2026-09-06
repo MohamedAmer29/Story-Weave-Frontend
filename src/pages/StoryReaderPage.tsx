@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useGSAP } from "@gsap/react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import {
@@ -24,13 +25,16 @@ import { Input } from "../components/ui/field";
 import { Badge } from "../components/ui/Badge";
 import { Modal } from "../components/ui/Modal";
 import { PageLoader } from "../components/ui/Skeleton";
+import { useContentLoading } from "../layouts/PageLoading";
 import { ErrorState } from "../components/ui/States";
 import { getErrorMessage } from "../api/axios";
 import { useAuth } from "../hooks/useAuth";
 import { useLanguage } from "../i18n";
+import { getCivilizationLabel } from "../constants/civilizations";
 import { useAppDispatch, useAppSelector } from "../store";
 import { setPage as savePage } from "../store/readerSlice";
 import { cn } from "../lib/cn";
+import { gsap, prefersReducedMotion, revealEase } from "../lib/gsap";
 import {
   buildResponsiveSrcSet,
   withImageCacheBust,
@@ -44,6 +48,79 @@ const activeStatuses: IllustrationPageStatus[] = [
   "UPLOADING",
 ];
 
+const loadedIllustrationSrcs = new Set<string>();
+
+function StoryPageIllustration({
+  src,
+  imageStatus,
+  statusLabel,
+  onExpand,
+  loadingLabel,
+}: {
+  src: string;
+  imageStatus: IllustrationPageStatus | null;
+  statusLabel: (s: IllustrationPageStatus | null) => string;
+  onExpand: (src: string) => void;
+  loadingLabel: string;
+}) {
+  const [state, setState] = useState<"loading" | "loaded" | "error">(() =>
+    loadedIllustrationSrcs.has(src) ? "loaded" : "loading",
+  );
+  const isGenerating =
+    imageStatus === "PENDING" ||
+    imageStatus === "QUEUED" ||
+    imageStatus === "GENERATING" ||
+    imageStatus === "UPLOADING";
+
+  const markLoaded = () => {
+    loadedIllustrationSrcs.add(src);
+    setState("loaded");
+  };
+
+  return (
+    <figure className="story-book-figure cursor-pointer" onClick={() => onExpand(src)}>
+      <div className="relative flex min-h-[14rem] items-center justify-center">
+        {(state !== "loaded" || isGenerating) && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center gap-2 rounded-xl border border-dashed border-border-strong bg-surface-2/60 p-8 text-sm text-fg-faint">
+            {state === "error" ? (
+              imageStatus === "FAILED" ? (
+                statusLabel(imageStatus)
+              ) : null
+            ) : (
+              <>
+                <Loader2 className="size-4 animate-spin" aria-hidden />
+                {isGenerating ? t.create.generating : loadingLabel}
+              </>
+            )}
+          </div>
+        )}
+        <img
+          ref={(img) => {
+            if (img && img.complete && img.naturalWidth > 0) {
+              markLoaded();
+            }
+          }}
+          src={src}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          onLoad={markLoaded}
+          onError={() => setState("error")}
+          className={cn(
+            "block max-h-[28rem] max-w-full overflow-hidden rounded-xl border border-border object-contain shadow-lg transition-[opacity,transform] duration-200 hover:scale-[1.02]",
+            state === "loaded" ? "opacity-100" : "opacity-0",
+          )}
+        />
+      </div>
+      {imageStatus !== "COMPLETED" && (
+        <figcaption className="mt-2 text-center text-xs text-fg-faint">
+          {isGenerating ? t.create.generating : statusLabel(imageStatus)}
+        </figcaption>
+      )}
+    </figure>
+  );
+}
+
 export function StoryReaderPage() {
   const { id } = useParams<{ id: string }>();
   const { t, dir } = useLanguage();
@@ -54,6 +131,7 @@ export function StoryReaderPage() {
   const [shareOpen, setShareOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
+  const rootRef = useRef<HTMLElement>(null);
 
   const storyId = id!;
 
@@ -87,12 +165,36 @@ export function StoryReaderPage() {
 
   const generateMutation = useMutation({
     mutationFn: () => illustrationApi.generate(storyId),
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success(t.create.generationStarted);
-      void queryClient.invalidateQueries({
+      await queryClient.invalidateQueries({
         queryKey: ["story", storyId, "illustration-status"],
       });
-      void queryClient.invalidateQueries({ queryKey: ["story", storyId] });
+      await queryClient.invalidateQueries({ queryKey: ["story", storyId] });
+    },
+    onError: (err) => toast.error(getErrorMessage(err) ?? t.common.error),
+  });
+
+  const regenerateCoverMutation = useMutation({
+    mutationFn: () => illustrationApi.regenerateCover(storyId),
+    onSuccess: async () => {
+      toast.success("Cover regeneration queued");
+      await queryClient.invalidateQueries({
+        queryKey: ["story", storyId, "illustration-status"],
+      });
+      await queryClient.invalidateQueries({ queryKey: ["story", storyId] });
+    },
+    onError: (err) => toast.error(getErrorMessage(err) ?? t.common.error),
+  });
+
+  const regeneratePageMutation = useMutation({
+    mutationFn: (pageId: string) => illustrationApi.regeneratePage(storyId, pageId),
+    onSuccess: async () => {
+      toast.success("Page regeneration queued");
+      await queryClient.invalidateQueries({
+        queryKey: ["story", storyId, "illustration-status"],
+      });
+      await queryClient.invalidateQueries({ queryKey: ["story", storyId] });
     },
     onError: (err) => toast.error(getErrorMessage(err) ?? t.common.error),
   });
@@ -109,11 +211,63 @@ export function StoryReaderPage() {
   const isGenerating =
     statusQuery.data?.status === "GENERATING" ||
     statusQuery.data?.status === "QUEUED";
+  const illustrationCompleted = statusQuery.data?.status === "COMPLETED";
+
+  useEffect(() => {
+    const status = statusQuery.data?.status;
+    if (
+      !status ||
+      status === "GENERATING" ||
+      status === "QUEUED"
+    ) {
+      return;
+    }
+
+    void queryClient.invalidateQueries({ queryKey: ["story", storyId] });
+  }, [queryClient, storyId, statusQuery.data?.status]);
 
   const sections = useMemo(() => query.data?.sections ?? [], [query.data]);
+  const pages = useMemo(() => query.data?.pages ?? [], [query.data]);
   const totalPages = Math.max(sections.length, 1);
   const safePage = Math.min(Math.max(page, 1), totalPages);
   const current = sections[safePage - 1];
+  const currentPageEntity = pages.find((item) => item.pageNumber === safePage);
+  const currentPageRegenerating =
+    current?.imageStatus === "GENERATING" ||
+    current?.imageStatus === "QUEUED" ||
+    current?.imageStatus === "UPLOADING";
+  const preloadedSrcs = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    const updatedAt = query.data?.updatedAt;
+    if (!updatedAt) return;
+    [safePage - 1, safePage, safePage + 1].forEach((index) => {
+      const url = sections[index - 1]?.imageUrl;
+      if (!url) return;
+      const src = withImageCacheBust(url, updatedAt);
+      if (!src) return;
+      if (preloadedSrcs.current.has(src)) return;
+      preloadedSrcs.current.add(src);
+      const img = new Image();
+      img.src = src;
+    });
+  }, [safePage, sections, query.data?.updatedAt]);
+
+  useGSAP(
+    () => {
+      if (prefersReducedMotion()) return;
+      const items = rootRef.current?.querySelectorAll("[data-page-reveal]");
+      if (!items?.length) return;
+      gsap.fromTo(
+        items,
+        { y: 24, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.8, stagger: 0.08, ease: revealEase },
+      );
+    },
+    { scope: rootRef, dependencies: [storyId, safePage, query.data?.updatedAt] },
+  );
+
+  useContentLoading(query.isLoading);
 
   if (query.isLoading) {
     return (
@@ -165,9 +319,10 @@ export function StoryReaderPage() {
         <meta name="description" content={story.description ?? undefined} />
       </Helmet>
 
-      <section className="hero-aurora relative">
+      <section ref={rootRef} className="hero-aurora relative">
         <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
           <Link
+            data-page-reveal
             to="/library"
             className="inline-flex items-center gap-2 text-sm font-medium text-fg-muted transition-colors hover:text-fg"
           >
@@ -176,16 +331,49 @@ export function StoryReaderPage() {
           </Link>
 
           <div className="mt-6 flex flex-col gap-8 lg:flex-row">
-            <div className="mx-auto w-full max-w-xs shrink-0 lg:mx-0">
+            <div data-page-reveal className="mx-auto w-full max-w-xs shrink-0 lg:mx-0">
               <div className="relative aspect-[3/4] overflow-hidden rounded-2xl border border-border bg-surface shadow-xl">
                 {storyCoverSrc ? (
-                  <img
-                    src={storyCoverSrc}
-                    alt={story.title}
-                    loading="lazy"
-                    srcSet={buildResponsiveSrcSet(storyCoverSrc) ?? undefined}
-                    className="size-full object-cover"
-                  />
+                  <div className="relative size-full">
+                    <img
+                      src={storyCoverSrc}
+                      alt={story.title}
+                      loading="lazy"
+                      srcSet={buildResponsiveSrcSet(storyCoverSrc) ?? undefined}
+                      className="size-full object-cover"
+                    />
+                    {(
+                      story.cover.imageStatus === "PENDING" ||
+                      story.cover.imageStatus === "QUEUED" ||
+                      story.cover.imageStatus === "GENERATING" ||
+                      story.cover.imageStatus === "UPLOADING" ||
+                      regenerateCoverMutation.isPending
+                    ) && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-overlay/70">
+                        <div className="flex items-center gap-2 rounded-full border border-white/20 bg-black/45 px-3 py-2 text-sm font-medium text-white backdrop-blur-sm">
+                          <Loader2 className="size-4 animate-spin" aria-hidden />
+                          {t.create.generating}
+                        </div>
+                      </div>
+                    )}
+                    {isOwner && (
+                      <div className="absolute inset-x-3 top-3 flex justify-end">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="bg-surface/85 text-xs shadow-lg backdrop-blur"
+                          onClick={() => regenerateCoverMutation.mutate()}
+                          loading={regenerateCoverMutation.isPending}
+                          disabled={
+                            regenerateCoverMutation.isPending || isGenerating
+                          }
+                        >
+                          <Wand2 className="size-3.5" aria-hidden />
+                          Regenerate cover
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 ) : (
                   <div className="flex size-full flex-col items-center justify-center gap-3 bg-gradient-to-br from-brand-600/20 via-surface to-navy-800/20 p-6 text-center">
                     <BookOpen
@@ -207,7 +395,7 @@ export function StoryReaderPage() {
               </div>
             </div>
 
-            <div className="min-w-0 flex-1">
+            <div data-page-reveal className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <Badge
                   tone={
@@ -240,12 +428,12 @@ export function StoryReaderPage() {
                 </Badge>
               </div>
 
-              <h1 className="font-display mt-4 text-3xl font-bold leading-tight text-fg sm:text-4xl">
+              <h1 className="font-display mt-4 text-3xl font-bold leading-tight text-display-tight text-fg sm:text-4xl">
                 {story.title}
               </h1>
 
               {story.description && (
-                <p className="mt-3 text-base text-fg-muted">
+                <p className="mt-3 text-base text-copy-rhythm text-fg-muted">
                   {story.description}
                 </p>
               )}
@@ -292,7 +480,7 @@ export function StoryReaderPage() {
                     <p className="font-medium text-fg">
                       {story.civilization === "UNSPECIFIED"
                         ? "—"
-                        : story.civilization}
+                        : getCivilizationLabel(story.civilization)}
                     </p>
                   </div>
                 )}
@@ -339,15 +527,21 @@ export function StoryReaderPage() {
                     size="sm"
                     onClick={() => generateMutation.mutate()}
                     loading={generateMutation.isPending}
-                    disabled={isGenerating}
+                    disabled={isGenerating || illustrationCompleted}
                     className="border-brand-500/40 text-brand-600 hover:bg-brand-500/10 dark:text-brand-400"
                   >
                     {isGenerating ? (
                       <Loader2 className="size-4 animate-spin" aria-hidden />
+                    ) : illustrationCompleted ? (
+                      <Sparkles className="size-4" aria-hidden />
                     ) : (
                       <Wand2 className="size-4" aria-hidden />
                     )}
-                    {isGenerating ? t.create.generating : t.create.generateNow}
+                    {isGenerating
+                      ? t.create.generating
+                      : illustrationCompleted
+                        ? t.reader.illustrationStatus.COMPLETED
+                        : t.create.generateNow}
                   </Button>
                   <Button
                     variant="ghost"
@@ -394,20 +588,23 @@ export function StoryReaderPage() {
           </div>
 
           {/* Reader */}
-          {sections.length === 0 ? (
-            <div className="mt-10 rounded-2xl border border-dashed border-border-strong bg-surface/50 p-10 text-center">
-              <p className="text-fg-muted">{t.reader.noPages}</p>
-              {isOwner && (
+              {sections.length === 0 ? (
+                <div className="mt-10 rounded-2xl border border-dashed border-border-strong bg-surface/50 p-10 text-center">
+                  <p className="text-fg-muted">{t.reader.noPages}</p>
+                  {isOwner && (
                 <Button
                   className="mt-4"
                   onClick={() => generateMutation.mutate()}
                   loading={generateMutation.isPending}
+                  disabled={isGenerating || illustrationCompleted}
                 >
-                  {t.create.generateNow}
-                </Button>
-              )}
-            </div>
-          ) : (
+                  {illustrationCompleted
+                    ? t.reader.illustrationStatus.COMPLETED
+                    : t.create.generateNow}
+                    </Button>
+                  )}
+                </div>
+              ) : (
             <div className="mt-12 space-y-10">
               <div
                 className={cn(
@@ -427,36 +624,39 @@ export function StoryReaderPage() {
                   <article className="p-6 sm:p-10 lg:p-12" dir={dir}>
                     <div className="story-book-layout">
                       {currentImageSrc ? (
-                        <figure
-                          className={cn(
-                            "story-book-figure cursor-pointer",
-                            dir === "rtl"
-                              ? "story-book-figure-rtl"
-                              : "story-book-figure-ltr",
-                          )}
-                          onClick={() => setExpandedImage(currentImageSrc)}
-                        >
-                          <img
+                        <div className="space-y-3">
+                          <StoryPageIllustration
+                            key={currentImageSrc}
                             src={currentImageSrc}
-                            alt=""
-                            loading="lazy"
-                            className="mx-auto max-h-[28rem] rounded-xl border border-border object-contain shadow-lg transition-transform duration-200 hover:scale-[1.02]"
+                            imageStatus={current.imageStatus}
+                            statusLabel={statusLabel}
+                            onExpand={setExpandedImage}
+                            loadingLabel={t.common.loading}
                           />
-                          {current.imageStatus !== "COMPLETED" && (
-                            <figcaption className="mt-2 text-center text-xs text-fg-faint">
-                              {statusLabel(current.imageStatus)}
-                            </figcaption>
+                          {isOwner && (
+                            <div className="flex justify-end">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  if (!currentPageEntity?.id) return;
+                                  regeneratePageMutation.mutate(currentPageEntity.id);
+                                }}
+                                loading={regeneratePageMutation.isPending}
+                                disabled={
+                                  regeneratePageMutation.isPending ||
+                                  currentPageRegenerating ||
+                                  !currentPageEntity?.id
+                                }
+                              >
+                                <Wand2 className="size-4" aria-hidden />
+                                Regenerate page illustration
+                              </Button>
+                            </div>
                           )}
-                        </figure>
+                        </div>
                       ) : (
-                        <div
-                          className={cn(
-                            "story-book-figure story-book-placeholder",
-                            dir === "rtl"
-                              ? "story-book-figure-rtl"
-                              : "story-book-figure-ltr",
-                          )}
-                        >
+                        <div className="story-book-figure story-book-placeholder">
                           <div className="flex min-h-[14rem] items-center justify-center gap-2 rounded-xl border border-dashed border-border-strong bg-surface-2/60 p-8 text-sm text-fg-faint">
                             {activeStatuses.includes(
                               (current.imageStatus ??
@@ -480,9 +680,9 @@ export function StoryReaderPage() {
                         </div>
                       )}
 
-                      <p className="story-book-text whitespace-pre-line text-lg leading-loose text-fg">
-                        {current.text}
-                      </p>
+                    <p className="story-book-text whitespace-pre-line text-lg text-reading-rhythm text-fg">
+                      {current.text}
+                    </p>
                     </div>
                   </article>
                 </div>

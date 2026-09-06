@@ -15,12 +15,12 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantClasses: Record<Variant, string> = {
   primary:
-    "bg-brand-600 text-white hover:bg-brand-700 dark:bg-brand-500 dark:hover:bg-brand-600 shadow-sm shadow-brand-700/20",
+    "bg-brand-600 text-white hover:bg-brand-700 dark:bg-brand-500 dark:hover:bg-brand-600 shadow-sm shadow-brand-700/20 hover:shadow-md hover:shadow-brand-700/25",
   secondary:
     "bg-navy-900 text-white hover:bg-navy-800 dark:bg-navy-700 dark:hover:bg-navy-600",
   ghost: "text-fg hover:bg-surface-3 bg-transparent",
   outline:
-    "border border-border-strong bg-transparent text-fg hover:border-brand-500 hover:text-brand-600 dark:hover:text-brand-400",
+    "border border-border-strong bg-elevated/60 text-fg hover:border-brand-500 hover:text-brand-600 dark:hover:text-brand-400",
   danger: "bg-red-600 text-white hover:bg-red-700 shadow-sm shadow-red-900/20",
   subtle: "bg-surface-2 text-fg hover:bg-surface-3 border border-border",
 };
@@ -40,7 +40,8 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
       ref={ref}
       disabled={disabled || loading}
       className={cn(
-        "inline-flex items-center justify-center rounded-lg font-semibold transition-colors duration-200 whitespace-nowrap",
+        "inline-flex items-center justify-center rounded-xl font-semibold transition-[color,background-color,box-shadow,transform] duration-200 whitespace-nowrap",
+        "hover:-translate-y-px active:translate-y-0",
         "disabled:opacity-60 disabled:cursor-not-allowed",
         variantClasses[variant],
         sizeClasses[size],

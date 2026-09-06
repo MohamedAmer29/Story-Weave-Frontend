@@ -19,9 +19,9 @@ export function Footer() {
   }
 
   return (
-    <footer className="border-t border-border bg-surface">
+    <footer className="border-t border-border/80 bg-[linear-gradient(180deg,transparent,color-mix(in_srgb,var(--color-surface)_80%,transparent))]">
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-2 gap-8 md:grid-cols-4 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-10 md:grid-cols-4 lg:grid-cols-5">
           <div className="col-span-2">
             <Logo />
             <p className="mt-3 max-w-xs text-sm text-fg-muted">
@@ -34,7 +34,7 @@ export function Footer() {
           </div>
 
           <nav aria-label={t.footer.exploreTitle}>
-            <h3 className="text-sm font-semibold text-fg">
+            <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-fg-faint">
               {t.footer.exploreTitle}
             </h3>
             <ul className="mt-3 space-y-2 text-sm">
@@ -76,7 +76,7 @@ export function Footer() {
           </nav>
 
           <nav aria-label={t.footer.resourceTitle}>
-            <h3 className="text-sm font-semibold text-fg">
+            <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-fg-faint">
               {t.footer.resourceTitle}
             </h3>
             <ul className="mt-3 space-y-2 text-sm">
@@ -112,7 +112,7 @@ export function Footer() {
           </nav>
 
           <nav aria-label={t.footer.legalTitle}>
-            <h3 className="text-sm font-semibold text-fg">
+            <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-fg-faint">
               {t.footer.legalTitle}
             </h3>
             <ul className="mt-3 space-y-2 text-sm">

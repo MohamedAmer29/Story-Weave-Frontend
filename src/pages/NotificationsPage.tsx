@@ -11,6 +11,7 @@ import { Button } from "../components/ui/Button";
 import { Badge } from "../components/ui/Badge";
 import { EmptyState, ErrorState } from "../components/ui/States";
 import { PageLoader } from "../components/ui/Skeleton";
+import { useContentLoading } from "../layouts/PageLoading";
 import { Pagination } from "../components/ui/Pagination";
 import { getErrorMessage } from "../api/axios";
 import { useLanguage } from "../i18n";
@@ -65,6 +66,8 @@ export function NotificationsPage() {
       navigate(`/stories/${storyId}`);
     }
   };
+
+  useContentLoading(isLoading);
 
   if (isLoading) return <div className="mx-auto max-w-3xl px-4 py-16"><PageLoader label={t.common.loading} /></div>;
 

@@ -10,9 +10,9 @@ export function Card({ children, className, interactive, ...rest }: CardProps) {
   return (
     <div
       className={cn(
-        "rounded-2xl border border-border bg-surface shadow-sm",
+        "rounded-[1.6rem] border border-border bg-surface shadow-[0_10px_30px_rgba(55,38,24,0.04)]",
         interactive &&
-          "transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-brand-500/40",
+          "transition-all duration-300 hover:-translate-y-1.5 hover:border-brand-500/35 hover:shadow-[0_22px_50px_rgba(55,38,24,0.1)]",
         className,
       )}
       {...rest}

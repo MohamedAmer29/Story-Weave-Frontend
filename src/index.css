@@ -77,6 +77,10 @@
   color-scheme: light;
   --font-arabic: "Cairo", "Manrope", ui-sans-serif, system-ui, sans-serif;
   --cursor-tilt: 0deg;
+  --tracking-display: -0.045em;
+  --tracking-copy: -0.01em;
+  --tracking-label: 0.18em;
+  --word-spacing-copy: 0.06em;
 }
 
 html {
@@ -95,7 +99,8 @@ body {
   margin: 0;
   overflow-x: clip;
   background:
-    radial-gradient(circle at top, rgba(201, 155, 75, 0.1), transparent 38%),
+    radial-gradient(circle at 12% -10%, rgba(201, 155, 75, 0.16), transparent 36%),
+    radial-gradient(circle at 88% 0%, rgba(33, 75, 77, 0.1), transparent 32%),
     var(--color-canvas);
   color: var(--color-fg);
   transition:
@@ -104,7 +109,7 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-@media (hover: hover) and (pointer: fine) {
+@media (hover: hover) and (pointer: fine) and (not (prefers-reduced-motion: reduce)) {
   html,
   body {
     cursor: none;
@@ -139,6 +144,33 @@ button:disabled,
 
 .font-display {
   font-family: var(--font-display);
+}
+
+.text-display-tight {
+  letter-spacing: var(--tracking-display);
+}
+
+.text-copy-rhythm {
+  letter-spacing: var(--tracking-copy);
+  word-spacing: var(--word-spacing-copy);
+  line-height: 1.8;
+}
+
+.text-label-rhythm {
+  letter-spacing: var(--tracking-label);
+  word-spacing: 0.08em;
+}
+
+.text-reading-rhythm {
+  letter-spacing: -0.008em;
+  word-spacing: 0.04em;
+  line-height: 1.9;
+}
+
+.surface-panel {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.34), transparent 32%),
+    var(--color-surface);
 }
 
 html[dir="rtl"] .font-display {
@@ -209,7 +241,7 @@ section[id],
     );
 }
 
-@media (hover: hover) and (pointer: fine) {
+@media (hover: hover) and (pointer: fine) and (not (prefers-reduced-motion: reduce)) {
   html,
   body,
   a,
@@ -251,37 +283,12 @@ section[id],
 }
 
 .story-book-figure {
-  width: min(42%, 24rem);
-  margin: 0.5rem 0 1rem;
-  float: left;
-  transform: rotate(var(--cursor-tilt));
-  transition: transform 0.2s ease;
-}
-
-.story-book-figure-rtl {
-  float: right;
-  margin-inline-start: 1.5rem;
-  margin-inline-end: 0;
-}
-
-.story-book-figure-ltr {
-  float: left;
-  margin-inline-end: 1.5rem;
-  margin-inline-start: 0;
+  width: 100%;
+  margin: 0 0 1.5rem;
 }
 
 .story-book-placeholder {
   min-height: 14rem;
-}
-
-@media (max-width: 1024px) {
-  .story-book-figure,
-  .story-book-figure-rtl,
-  .story-book-figure-ltr {
-    float: none;
-    width: 100%;
-    margin: 0 0 1.5rem;
-  }
 }
 
 .cursor-feather {
@@ -290,16 +297,15 @@ section[id],
   left: 0;
   width: 30px;
   height: 30px;
-  display: block;
+  display: none;
   pointer-events: none;
   z-index: 2147483647;
   color: var(--color-brand-600);
-  opacity: 0;
+  opacity: 1;
   transform: translate3d(0, 0, 0);
   transition:
     width 0.18s ease,
     height 0.18s ease,
-    transform 0.18s ease-out,
     opacity 0.18s ease;
   transform-origin: center center;
   filter: drop-shadow(0 8px 16px rgba(74, 44, 30, 0.18));
@@ -430,4 +436,36 @@ section[id],
 
 .sf-slide-down {
   animation: sf-slide-down 0.25s ease both;
+}
+
+.page-grain {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.45'/%3E%3C/svg%3E");
+  opacity: 0.18;
+  mix-blend-mode: multiply;
+}
+
+.dark .page-grain {
+  opacity: 0.12;
+  mix-blend-mode: overlay;
+}
+
+.page-shell {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 80rem;
+  padding-inline: 1rem;
+  padding-block: 2.5rem;
+}
+
+@media (min-width: 640px) {
+  .page-shell {
+    padding-inline: 1.5rem;
+    padding-block: 3rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .page-shell {
+    padding-inline: 2rem;
+  }
 }

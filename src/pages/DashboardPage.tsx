@@ -15,9 +15,11 @@ import { dashboardApi } from "../api/dashboardApi";
 import { Card, CardBody } from "../components/ui/Card";
 import { StoryCard } from "../components/home/StoryCard";
 import { PageLoader } from "../components/ui/Skeleton";
+import { useContentLoading } from "../layouts/PageLoading";
 import { Button } from "../components/ui/Button";
 import { EmptyState, ErrorState } from "../components/ui/States";
 import { useLanguage } from "../i18n";
+import { useAuth } from "../hooks/useAuth";
 
 function StatTile({
   icon: Icon,
@@ -57,10 +59,15 @@ export function DashboardPage() {
   const { t } = useLanguage();
   const navigate = useNavigate();
 
+  const { status } = useAuth();
+
   const query = useQuery({
     queryKey: ["dashboard"],
     queryFn: dashboardApi.get,
+    enabled: status === "authenticated",
   });
+
+  useContentLoading(query.isLoading);
 
   if (query.isLoading) return <PageLoader label={t.dashboard.subtitle} />;
   if (query.isError || !query.data) {
@@ -85,10 +92,10 @@ export function DashboardPage() {
           {t.nav.dashboard} · {t.brand.name}
         </title>
       </Helmet>
-      <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+      <section className="page-shell">
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div>
-            <h1 className="font-display text-3xl font-bold text-fg sm:text-4xl">
+            <h1 className="font-display text-3xl font-semibold tracking-[-0.04em] text-fg sm:text-5xl">
               {t.dashboard.title}
             </h1>
             <p className="mt-2 text-fg-muted">{t.dashboard.subtitle}</p>
@@ -99,7 +106,7 @@ export function DashboardPage() {
           </Button>
         </div>
 
-        <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="mt-8 grid grid-cols-2 gap-4 md:grid-cols-4">
           <StatTile
             icon={BookOpen}
             label={t.dashboard.totalStories}
@@ -138,7 +145,7 @@ export function DashboardPage() {
             value={data.stats.failedStories}
             tone="danger"
           />
-          <Card className="p-5 sm:col-span-2 lg:col-span-1">
+          <Card className="p-5">
             <div className="flex items-center gap-4">
               <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400">
                 <BookOpen className="size-5.5" aria-hidden />
@@ -182,7 +189,7 @@ export function DashboardPage() {
                 }
               />
             ) : (
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3 bg-auto rounded-2xl border border-border shadow-sm p-5">
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
                 {data.recentStories.map((story) => (
                   <StoryCard key={story.id} story={story} />
                 ))}

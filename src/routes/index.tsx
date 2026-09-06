@@ -10,7 +10,15 @@ import { HomePage } from "../pages/HomePage";
 import { ExplorePage } from "../pages/ExplorePage";
 import { HowItWorksPage } from "../pages/HowItWorksPage";
 import { LoginPage, RegisterPage } from "../pages/AuthPages";
-import { VerifyEmailPage } from "../pages/auth/VerifyEmailPage";
+import {
+  SendVerifyEmailPage,
+  VerifyEmailOtpPage,
+} from "../pages/auth/VerifyEmailPage";
+import {
+  ForgotPasswordPage,
+  ForgotPasswordOtpPage,
+  ResetPasswordPage,
+} from "../pages/auth/ForgotPasswordPage";
 import { DashboardPage } from "../pages/DashboardPage";
 import { LibraryPage } from "../pages/LibraryPage";
 import { CreateStoryPage } from "../pages/CreateStoryPage";
@@ -57,11 +65,29 @@ export function AppRoutes() {
             </GuestRoute>
           }
         />
+        <Route path="/verify-email" element={<SendVerifyEmailPage />} />
+        <Route path="/verify-email-otp" element={<VerifyEmailOtpPage />} />
         <Route
-          path="/verify-email"
+          path="/forgot-password"
           element={
             <GuestRoute>
-              <VerifyEmailPage />
+              <ForgotPasswordPage />
+            </GuestRoute>
+          }
+        />
+        <Route
+          path="/forgot-password-otp"
+          element={
+            <GuestRoute>
+              <ForgotPasswordOtpPage />
+            </GuestRoute>
+          }
+        />
+        <Route
+          path="/reset-password"
+          element={
+            <GuestRoute>
+              <ResetPasswordPage />
             </GuestRoute>
           }
         />

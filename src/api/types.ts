@@ -1,3 +1,5 @@
+import type { StoryCivilization } from "../constants/civilizations";
+
 export type StoryStatus = "DRAFT" | "PROCESSING" | "READY" | "FAILED";
 export type StoryVisibility = "PUBLIC" | "PRIVATE" | "SHARED";
 export type SourceType = "TEXT" | "PDF";
@@ -19,14 +21,7 @@ export type StoryType =
   | "THRILLER";
 
 export type StoryEra = "BCE" | "CE" | "MODERN" | "UNSPECIFIED";
-export type StoryCivilization =
-  | "ARABIC"
-  | "EGYPTIAN"
-  | "ANCIENT_EGYPTIAN"
-  | "GREEK"
-  | "ROMAN"
-  | "CUSTOM"
-  | "UNSPECIFIED";
+export type { StoryCivilization };
 export type StoryTheme =
   | "FANTASY"
   | "HISTORICAL"
@@ -391,4 +386,22 @@ export interface SystemHealth {
   status: "ok" | "degraded" | "down";
   timestamp: string;
   checks: { database: "up" | "down"; redis: "up" | "down"; queue: "up" | "down" };
+}
+
+export interface AuditMetadata {
+  method?: string;
+  path?: string;
+}
+
+export interface AuditEntry {
+  id: string;
+  adminId: string;
+  adminEmail: string | null;
+  action: string;
+  targetType: string | null;
+  targetId: string | null;
+  metadata: AuditMetadata | null;
+  ip: string | null;
+  userAgent: string | null;
+  createdAt: string;
 }

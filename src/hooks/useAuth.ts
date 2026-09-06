@@ -6,40 +6,68 @@ import { useAppDispatch, useAppSelector } from "../store";
 import {
   clearCredentials,
   setCredentials,
+  setToken,
   setStatus,
   setUser,
   updateLocalUser,
   type AuthenticatedUser,
 } from "../store/authSlice";
 
+import { requestRefresh } from "../api/axios";
+
 export function useAuth() {
   const dispatch = useAppDispatch();
   const { token, user, status } = useAppSelector((state) => state.auth);
 
   useEffect(() => {
-    if (token && !user && status === "idle") {
+    if (!user && status === "idle") {
       dispatch(setStatus("loading"));
-      authApi
-        .me()
-        .then((u) => {
-          usersApi
-            .me()
-            .then((userData) => {
-              dispatch(
-                setUser({
-                  ...u,
-                  avatarUrl: userData.data.avatarUrl,
-                } as AuthenticatedUser),
-              );
-            })
-            .catch(() => {
-              dispatch(setUser(u as AuthenticatedUser));
-            });
-        })
-        .catch(() => dispatch(clearCredentials()))
-        .finally(() => {
-          // status handled in reducers
-        });
+      if (token) {
+        authApi
+          .me()
+          .then((u) => {
+            usersApi
+              .me()
+              .then((userData) => {
+                dispatch(
+                  setUser({
+                    ...u,
+                    avatarUrl: userData.data.avatarUrl,
+                  } as AuthenticatedUser),
+                );
+              })
+              .catch(() => {
+                dispatch(setUser(u as AuthenticatedUser));
+              });
+          })
+          .catch(() => {
+            requestRefresh()
+              .then((newToken) => {
+                if (newToken) {
+                  authApi
+                    .me()
+                    .then((u) => dispatch(setUser(u as AuthenticatedUser)))
+                    .catch(() => dispatch(clearCredentials()));
+                } else {
+                  dispatch(clearCredentials());
+                }
+              })
+              .catch(() => dispatch(clearCredentials()));
+          });
+      } else {
+        requestRefresh()
+          .then((newToken) => {
+            if (newToken) {
+              authApi
+                .me()
+                .then((u) => dispatch(setUser(u as AuthenticatedUser)))
+                .catch(() => dispatch(clearCredentials()));
+            } else {
+              dispatch(clearCredentials());
+            }
+          })
+          .catch(() => dispatch(clearCredentials()));
+      }
     }
   }, [token, user, status, dispatch]);
 
@@ -63,20 +91,6 @@ export function useAuth() {
 
   const registerMutation = useMutation({
     mutationFn: (payload: RegisterPayload) => authApi.register(payload),
-    onSuccess: (res) => {
-      dispatch(
-        setCredentials({
-          token: res.accessToken,
-          user: res.user as AuthenticatedUser,
-        }),
-      );
-      usersApi
-        .me()
-        .then((userData) => {
-          dispatch(updateLocalUser({ avatarUrl: userData.data.avatarUrl }));
-        })
-        .catch(() => {});
-    },
   });
 
   const logout = useCallback(async () => {
@@ -93,6 +107,7 @@ export function useAuth() {
     user,
     status,
     isAuthenticated: Boolean(token && user),
+    loggedIn: Boolean(token),
     login: loginMutation.mutateAsync,
     register: registerMutation.mutateAsync,
     loginPending: loginMutation.isPending,

@@ -7,10 +7,10 @@ export function Logo({ className, linkTo = "/" }: { className?: string; linkTo?:
   const { t } = useLanguage();
   return (
     <Link to={linkTo} className={cn("inline-flex items-center gap-2.5", className)}>
-      <span className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-brand-600 to-navy-800 text-white shadow-sm shadow-brand-700/30">
+      <span className="flex size-9 items-center justify-center rounded-2xl bg-linear-to-br from-brand-500 to-sky-400 text-white shadow-[0_10px_20px_rgba(138,70,48,0.28)]">
         <BookOpenText className="size-5" aria-hidden />
       </span>
-      <span className="font-display text-lg font-bold leading-tight text-fg">
+      <span className="font-display text-xl font-bold leading-tight tracking-[-0.03em] text-fg">
         {t.brand.name}
       </span>
     </Link>

@@ -9,6 +9,7 @@ import { SkeletonGrid } from "../ui/Skeleton";
 import { EmptyState, ErrorState } from "../ui/States";
 import { Input } from "../ui/field";
 import { Pagination } from "../ui/Pagination";
+import { Reveal } from "../motion/Reveal";
 import { useLanguage } from "../../i18n";
 
 export function ExploreStories() {
@@ -34,7 +35,9 @@ export function ExploreStories() {
   return (
     <section className="py-20 sm:py-24">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <SectionHeading eyebrow={t.explore.title} title={t.explore.title} subtitle={t.explore.subtitle} />
+        <Reveal>
+          <SectionHeading eyebrow={t.explore.title} title={t.explore.title} subtitle={t.explore.subtitle} />
+        </Reveal>
 
         <div className="mx-auto mt-8 max-w-md">
           <div className="relative">

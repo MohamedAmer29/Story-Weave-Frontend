@@ -8,7 +8,11 @@ import { Skeleton } from "../../components/ui/Skeleton";
 import { Pagination } from "../../components/ui/Pagination";
 import { Input } from "../../components/ui/field";
 import { useLanguage } from "../../i18n";
-import { cn } from "../../lib/cn";
+
+function formatDate(value: string): string {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
+}
 
 export function AdminAuditPage() {
   const { t } = useLanguage();
@@ -79,17 +83,35 @@ export function AdminAuditPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {audits.map((audit: unknown) => (
-                        <tr key={String(audit)} className="border-b border-border last:border-0 hover:bg-surface-2/60">
-                          <td className="px-4 py-3 font-mono text-xs text-fg">{String(audit)}</td>
+                      {audits.map((audit) => (
+                        <tr
+                          key={audit.id}
+                          className="border-b border-border last:border-0 hover:bg-surface-2/60"
+                        >
+                          <td className="px-4 py-3 font-mono text-xs text-fg">{audit.id.slice(0, 8)}</td>
                           <td className="px-4 py-3">
-                            <Badge tone="neutral">{String(audit)}</Badge>
+                            <Badge tone="neutral">{audit.action}</Badge>
                           </td>
-                          <td className="px-4 py-3 text-fg">{String(audit)}</td>
-                          <td className="px-4 py-3 text-fg-muted">{String(audit)}</td>
-                          <td className="px-4 py-3 max-w-xs truncate text-fg-muted">{String(audit)}</td>
-                          <td className="px-4 py-3 font-mono text-xs text-fg-muted">{String(audit)}</td>
-                          <td className="px-4 py-3 text-fg-muted">{String(audit)}</td>
+                          <td className="px-4 py-3 text-fg">{audit.adminEmail ?? audit.adminId}</td>
+                          <td className="px-4 py-3 text-fg-muted">
+                            {audit.targetType ? (
+                              <>
+                                {audit.targetType}
+                                {audit.targetId ? (
+                                  <span className="ml-2 font-mono text-xs text-fg-faint">
+                                    {audit.targetId.slice(0, 8)}
+                                  </span>
+                                ) : null}
+                              </>
+                            ) : (
+                              "—"
+                            )}
+                          </td>
+                          <td className="px-4 py-3 max-w-xs truncate text-fg-muted">
+                            {audit.metadata?.method ? `${audit.metadata.method} ${audit.metadata.path}` : "—"}
+                          </td>
+                          <td className="px-4 py-3 font-mono text-xs text-fg-muted">{audit.ip ?? "—"}</td>
+                          <td className="px-4 py-3 text-fg-muted">{formatDate(audit.createdAt)}</td>
                         </tr>
                       ))}
                     </tbody>

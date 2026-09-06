@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { gsap, prefersReducedMotion } from "../../lib/gsap";
 
 const INTERACTIVE_SELECTOR = [
   "a",
@@ -15,112 +16,86 @@ const INTERACTIVE_SELECTOR = [
 
 const CursorFollower = () => {
   const cursorRef = useRef<HTMLDivElement | null>(null);
-  const pointerRef = useRef({
-    x: window.innerWidth / 2,
-    y: window.innerHeight / 2,
-    targetX: window.innerWidth / 2,
-    targetY: window.innerHeight / 2,
-  });
 
   useEffect(() => {
     const cursor = cursorRef.current;
     if (!cursor) return;
-
-    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const reducedMotion = media.matches;
-
-    if (reducedMotion) {
+    
+    if (prefersReducedMotion()) {
       cursor.style.display = "none";
       return;
     }
 
-    const setCursorVisibility = () => {
-      const target = document.elementFromPoint(
-        pointerRef.current.x,
-        pointerRef.current.y,
-      ) as Element | null;
-      const isInteractive = !!target?.closest?.(INTERACTIVE_SELECTOR);
+    let xTo: ((value: number) => void) | null = null;
+    let yTo: ((value: number) => void) | null = null;
+    let rotateTo: ((value: number) => void) | null = null;
+    let scaleTo: ((value: number) => void) | null = null;
 
-      cursor.style.display = "block";
+    try {
+      xTo = gsap.quickTo(cursor, "x", { duration: 0.28, ease: "power3.out" });
+      yTo = gsap.quickTo(cursor, "y", { duration: 0.28, ease: "power3.out" });
+      rotateTo = gsap.quickTo(cursor, "rotation", {
+        duration: 0.35,
+        ease: "power3.out",
+      });
+      scaleTo = gsap.quickTo(cursor, "scale", {
+        duration: 0.28,
+        ease: "power3.out",
+      });
+    } catch {
+      // GSAP not available, show default cursor
+      document.body.style.cursor = "";
+      document.documentElement.style.cursor = "";
+      return;
+    }
+
+    // Start with cursor visible at center
+    gsap.set(cursor, {
+      x: window.innerWidth / 2,
+      y: window.innerHeight / 2,
+      opacity: 1,
+      display: "block",
+    });
+
+    const applyMode = (isInteractive: boolean) => {
       cursor.dataset.mode = isInteractive ? "interactive" : "default";
-      const rotation = isInteractive ? -24 : 12;
-      document.documentElement.style.setProperty(
-        "--cursor-tilt",
-        `${rotation}deg`,
-      );
-      cursor.style.opacity = "1";
-      cursor.style.width = isInteractive ? "38px" : "30px";
-      cursor.style.height = isInteractive ? "38px" : "30px";
-      cursor.style.transform = `translate(${pointerRef.current.x}px, ${pointerRef.current.y}px) rotate(${rotation}deg) scale(${isInteractive ? 1.15 : 1})`;
+      rotateTo?.(isInteractive ? -24 : 12);
+      scaleTo?.(isInteractive ? 1.18 : 1);
+      gsap.to(cursor, {
+        width: isInteractive ? 38 : 30,
+        height: isInteractive ? 38 : 30,
+        duration: 0.2,
+        overwrite: "auto",
+      });
     };
 
-    const updatePointerFromEvent = (event: PointerEvent) => {
-      pointerRef.current.targetX = event.clientX;
-      pointerRef.current.targetY = event.clientY;
-
+    const onMove = (event: PointerEvent) => {
+      xTo?.(event.clientX);
+      yTo?.(event.clientY);
+      gsap.to(cursor, { opacity: 1, duration: 0.2, overwrite: "auto" });
       const target = event.target as Element | null;
-      const isInteractive = !!target?.closest?.(INTERACTIVE_SELECTOR);
-      cursor.dataset.mode = isInteractive ? "interactive" : "default";
-      cursor.style.opacity = "1";
-      cursor.style.width = isInteractive ? "38px" : "30px";
-      cursor.style.height = isInteractive ? "38px" : "30px";
+      applyMode(!!target?.closest?.(INTERACTIVE_SELECTOR));
     };
 
-    const handlePointerLeave = () => {
-      cursor.style.opacity = "0.35";
+    const onLeave = () => {
+      gsap.to(cursor, { opacity: 0.35, duration: 0.2, overwrite: "auto" });
     };
 
-    const handlePointerDown = () => {
-      cursor.classList.add("is-pressed");
-    };
-
-    const handlePointerUp = () => {
-      cursor.classList.remove("is-pressed");
-    };
-
-    const updateCursorState = (event: Event) => {
-      const target = event.target as Element | null;
-      const isInteractive = !!target?.closest?.(INTERACTIVE_SELECTOR);
-      cursor.dataset.mode = isInteractive ? "interactive" : "default";
-    };
+    const handlePointerDown = () => cursor.classList.add("is-pressed");
+    const handlePointerUp = () => cursor.classList.remove("is-pressed");
 
     document.body.style.cursor = "none";
     document.documentElement.style.cursor = "none";
-    setCursorVisibility();
-    document.addEventListener("pointermove", updatePointerFromEvent);
-    document.addEventListener("pointerover", updateCursorState);
-    document.addEventListener("pointerleave", handlePointerLeave);
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerleave", onLeave);
     document.addEventListener("pointerdown", handlePointerDown);
     document.addEventListener("pointerup", handlePointerUp);
 
-    let rafId = 0;
-
-    const animate = () => {
-      const { x, y, targetX, targetY } = pointerRef.current;
-      pointerRef.current.x += (targetX - x) * 0.22;
-      pointerRef.current.y += (targetY - y) * 0.22;
-
-      const isInteractive = cursor.dataset.mode === "interactive";
-      const rotation = isInteractive ? -24 : 12;
-      const scale = isInteractive ? 1.15 : 1;
-      document.documentElement.style.setProperty(
-        "--cursor-tilt",
-        `${rotation}deg`,
-      );
-      cursor.style.transform = `translate(${pointerRef.current.x}px, ${pointerRef.current.y}px) rotate(${rotation}deg) scale(${scale})`;
-      rafId = requestAnimationFrame(animate);
-    };
-
-    rafId = requestAnimationFrame(animate);
-
     return () => {
-      cancelAnimationFrame(rafId);
       document.body.style.cursor = "";
       document.documentElement.style.cursor = "";
-      document.documentElement.style.removeProperty("--cursor-tilt");
-      document.removeEventListener("pointermove", updatePointerFromEvent);
-      document.removeEventListener("pointerover", updateCursorState);
-      document.removeEventListener("pointerleave", handlePointerLeave);
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerleave", onLeave);
       document.removeEventListener("pointerdown", handlePointerDown);
       document.removeEventListener("pointerup", handlePointerUp);
       cursor.style.display = "none";

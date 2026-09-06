@@ -15,22 +15,16 @@ export interface User {
 
 interface AuthState {
   token: string | null;
+  tokenIssuedAt: number | null;
   user: User | null;
   status: "idle" | "loading" | "authenticated" | "unauthenticated";
 }
 
-const initialToken = (() => {
-  try {
-    return window.localStorage.getItem("storyforge_token");
-  } catch {
-    return null;
-  }
-})();
-
 const initialState: AuthState = {
-  token: initialToken,
+  token: null,
+  tokenIssuedAt: null,
   user: null,
-  status: initialToken ? "idle" : "unauthenticated",
+  status: "idle",
 };
 
 const authSlice = createSlice({
@@ -41,14 +35,16 @@ const authSlice = createSlice({
       state,
       action: PayloadAction<{ token: string; user: AuthenticatedUser }>
     ) {
+      const now = Date.now();
       state.token = action.payload.token;
+      state.tokenIssuedAt = now;
       state.user = action.payload.user;
       state.status = "authenticated";
-      window.localStorage.setItem("storyforge_token", action.payload.token);
     },
     setToken(state, action: PayloadAction<string>) {
+      const now = Date.now();
       state.token = action.payload;
-      window.localStorage.setItem("storyforge_token", action.payload);
+      state.tokenIssuedAt = now;
     },
     setUser(state, action: PayloadAction<AuthenticatedUser>) {
       state.user = action.payload;
@@ -59,9 +55,9 @@ const authSlice = createSlice({
     },
     clearCredentials(state) {
       state.token = null;
+      state.tokenIssuedAt = null;
       state.user = null;
       state.status = "unauthenticated";
-      window.localStorage.removeItem("storyforge_token");
     },
     updateLocalUser(state, action: PayloadAction<Partial<AuthenticatedUser>>) {
       if (state.user) {

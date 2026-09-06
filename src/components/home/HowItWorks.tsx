@@ -1,6 +1,6 @@
 import { PenLine, Globe2, Wand2, BookOpenCheck } from "lucide-react";
 import { SectionHeading } from "./SectionHeading";
-import { cn } from "../../lib/cn";
+import { Reveal, RevealStagger } from "../motion/Reveal";
 import { useLanguage } from "../../i18n";
 
 export function HowItWorks() {
@@ -34,53 +34,51 @@ export function HowItWorks() {
   ];
 
   return (
-    <section
-      id="how-it-works"
-      className="relative py-20 sm:py-24 dark:bg-[#171412]"
-    >
+    <section id="how-it-works" className="relative py-20 sm:py-28">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <SectionHeading
-          title={t.howItWorks.title}
-          subtitle={t.howItWorks.subtitle}
-        />
-        <div className="mt-14 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {steps.map((step, i) => (
-            <div
-              key={step.number}
-              className={cn(
-                "relative rounded-[1.6rem] border border-border bg-[linear-gradient(180deg,rgba(255,255,255,0.9),rgba(243,234,219,0.75))] p-6 shadow-[0_16px_40px_rgba(49,34,23,0.04)] dark:border-border dark:bg-[linear-gradient(180deg,#27211e,#1d1815)]",
-                i === 2 && "lg:-translate-y-2",
-                i === 3 && "lg:-translate-y-4",
-              )}
-              dir={dir}
-            >
-              <div className="flex items-center justify-between gap-3">
-                <span className="inline-flex size-11 items-center justify-center rounded-2xl bg-[#efe0cf] text-brand-700 dark:bg-white/8 dark:text-brand-300">
-                  <step.icon className="size-5" aria-hidden />
-                </span>
-                <span
-                  className="font-display text-4xl font-semibold leading-none text-[#d7b998] dark:text-[#e7c497]"
-                  aria-hidden
-                >
-                  {step.number}
-                </span>
-              </div>
-              <h3 className="mt-5 text-xl font-bold text-fg dark:text-[#f7ebdf]">
-                {step.title}
-              </h3>
-              <p className="mt-3 text-sm leading-relaxed text-fg-muted dark:text-[#d9c5b4]">
-                {step.desc}
-              </p>
-              {i < steps.length - 1 && (
-                <span
-                  className="absolute top-1/2 hidden -end-4 -translate-y-1/2 text-2xl text-border-strong lg:block"
-                  aria-hidden
-                >
-                  {dir === "rtl" ? "←" : "→"}
-                </span>
-              )}
-            </div>
-          ))}
+        <Reveal>
+          <SectionHeading
+            eyebrow={t.nav.howItWorks}
+            title={t.howItWorks.title}
+            subtitle={t.howItWorks.subtitle}
+          />
+        </Reveal>
+        <div className="relative mt-16">
+          <div
+            className="pointer-events-none absolute top-[2.4rem] end-8 start-8 hidden h-px bg-linear-to-r from-transparent via-brand-400/40 to-transparent lg:block"
+            aria-hidden
+          />
+          <RevealStagger className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {steps.map((step, i) => (
+              <article
+                key={step.number}
+                className="group relative rounded-[1.75rem] border border-border bg-surface/90 p-6 shadow-[0_18px_48px_rgba(49,34,23,0.05)] transition-transform duration-300 hover:-translate-y-1.5"
+                dir={dir}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <span className="inline-flex size-12 items-center justify-center rounded-2xl bg-brand-500/10 text-brand-700 transition-colors group-hover:bg-brand-600 group-hover:text-white">
+                    <step.icon className="size-5" aria-hidden />
+                  </span>
+                  <span
+                    className="font-display text-4xl font-semibold leading-none text-brand-300/80"
+                    aria-hidden
+                  >
+                    {step.number}
+                  </span>
+                </div>
+                <h3 className="mt-6 text-xl font-bold text-fg">{step.title}</h3>
+                <p className="mt-3 text-sm leading-relaxed text-fg-muted">{step.desc}</p>
+                {i < steps.length - 1 && (
+                  <span
+                    className="absolute top-8 hidden -end-3 text-brand-400/70 lg:block"
+                    aria-hidden
+                  >
+                    {dir === "rtl" ? "←" : "→"}
+                  </span>
+                )}
+              </article>
+            ))}
+          </RevealStagger>
         </div>
       </div>
     </section>

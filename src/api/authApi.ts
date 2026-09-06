@@ -23,6 +23,12 @@ interface MessageResponse {
   message: string;
 }
 
+export interface VerifyEmailResponse {
+  message: string;
+  user: UserProfile;
+  accessToken: string;
+}
+
 export const authApi = {
   login: (payload: LoginPayload) =>
     api.post<LoginResponse>("/auth/login", payload).then((r) => r.data),
@@ -51,7 +57,7 @@ export const authApi = {
     api.delete<MessageResponse>("/auth/sessions/others").then((r) => r.data),
 
   verifyEmail: (payload: { email: string; otp: string }) =>
-    api.post<MessageResponse>("/auth/verify-email", payload).then((r) => r.data),
+    api.post<VerifyEmailResponse>("/auth/verify-email", payload).then((r) => r.data),
 
   resendVerification: (payload: { email: string }) =>
     api.post<MessageResponse>("/auth/resend-verification", payload).then((r) => r.data),

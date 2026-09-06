@@ -45,8 +45,11 @@ export function ExplorePage() {
         <meta name="description" content={t.explore.subtitle} />
       </Helmet>
       <section className="hero-aurora relative min-h-[70vh]">
-        <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-          <h1 className="font-display text-4xl font-bold text-fg sm:text-5xl">{t.explore.title}</h1>
+        <div className="page-shell">
+          <p className="inline-flex items-center gap-2 rounded-full border border-brand-500/20 bg-brand-500/8 px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.2em] text-brand-700">
+            {t.nav.explore}
+          </p>
+          <h1 className="mt-4 font-display text-4xl font-semibold tracking-[-0.04em] text-fg sm:text-6xl">{t.explore.title}</h1>
           <p className="mt-3 max-w-xl text-lg text-fg-muted">{t.explore.subtitle}</p>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">

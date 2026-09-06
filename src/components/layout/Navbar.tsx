@@ -45,7 +45,7 @@ function userLinks(t: ReturnType<typeof useLanguage>["t"]): NavLinkDef[] {
 
 export function Navbar() {
   const { t } = useLanguage();
-  const { isAuthenticated, user, logout } = useAuth();
+  const { isAuthenticated, user, logout, loggedIn } = useAuth();
   const isAdmin = useIsAdmin();
   const navigate = useNavigate();
   const location = useLocation();
@@ -55,7 +55,7 @@ export function Navbar() {
 
   const isLandingPage = location.pathname === "/";
   const guestNavLinks = guestLinks(t);
-  const links = isAuthenticated
+  const links = loggedIn
     ? userLinks(t)
     : isLandingPage
       ? guestNavLinks
@@ -64,7 +64,7 @@ export function Navbar() {
   const isFeaturesActive = isLandingPage && location.hash === "#features";
   const isExploreActive = location.pathname === "/explore";
   const isHowItWorksActive = location.pathname === "/how-it-works";
-  const showAdminGlobalControls = isAuthenticated && isAdmin;
+  const showAdminGlobalControls = loggedIn && isAdmin;
 
   const handleLogout = async () => {
     dispatch(closeMobileNav());
@@ -79,8 +79,8 @@ export function Navbar() {
   };
 
   return (
-    <header className="sticky top-0 z-40  border-b border-border bg-canvas/80 backdrop-blur-xl">
-      <div className="mx-auto flex h-20 w-full  items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-40 border-b border-border/70 bg-canvas/72 backdrop-blur-2xl">
+      <div className="mx-auto flex h-[4.5rem] w-full items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
         <div className="flex min-w-0 items-center justify-start gap-3 lg:gap-4">
           <div className="shrink-0">
             <Logo />
@@ -140,10 +140,10 @@ export function Navbar() {
                   }}
                   className={() =>
                     cn(
-                      "rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                      "rounded-full px-3.5 py-2 text-sm font-medium transition-colors",
                       isActive
-                        ? "bg-brand-500/10 text-brand-600 dark:bg-brand-500/15 dark:text-brand-300"
-                        : "text-fg-muted hover:bg-surface-3 hover:text-fg",
+                        ? "bg-brand-500/12 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300"
+                        : "text-fg-muted hover:bg-surface-3/80 hover:text-fg",
                     )
                   }
                 >
@@ -185,7 +185,7 @@ export function Navbar() {
         <div className="hidden shrink-0 items-center justify-end gap-2 lg:flex">
           <LanguageSwitcher />
           <ThemeToggle compact />
-          {!isAuthenticated && (
+          {!loggedIn && (
             <>
               <Button variant="ghost" onClick={() => go("/login")}>
                 {t.nav.login}
@@ -275,7 +275,7 @@ export function Navbar() {
 
         {/* Mobile controls */}
         <div className="flex items-center gap-2 lg:hidden">
-          {isAuthenticated ? (
+          {loggedIn ? (
             <NavLink
               to="/notifications"
               className="relative rounded-lg p-2 text-fg-muted hover:text-fg"
@@ -307,7 +307,7 @@ export function Navbar() {
       </div>
 
       {/* Mobile panel */}
-      {mobileOpen && (
+      {!loggedIn && mobileOpen && (
         <div className="sf-slide-down border-t border-border bg-surface lg:hidden">
           <nav
             className="mx-auto max-w-7xl space-y-1 px-4 py-4"
@@ -378,7 +378,7 @@ export function Navbar() {
               <LanguageSwitcher />
               <ThemeToggle compact />
             </div>
-            {!isAuthenticated && (
+            {!loggedIn && (
               <div className="flex gap-3 pt-3">
                 <Button
                   variant="outline"
