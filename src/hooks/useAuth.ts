@@ -1,12 +1,15 @@
 import { useCallback, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { authApi, type LoginPayload, type RegisterPayload } from "../api/authApi";
+import {
+  authApi,
+  type LoginPayload,
+  type RegisterPayload,
+} from "../api/authApi";
 import { usersApi } from "../api/usersApi";
 import { useAppDispatch, useAppSelector } from "../store";
 import {
   clearCredentials,
   setCredentials,
-  setToken,
   setStatus,
   setUser,
   updateLocalUser,
@@ -19,34 +22,37 @@ export function useAuth() {
   const dispatch = useAppDispatch();
   const { token, user, status } = useAppSelector((state) => state.auth);
 
+  const hydrateUser = useCallback(
+    async (authUser: AuthenticatedUser) => {
+      try {
+        const profile = await usersApi.me();
+        dispatch(
+          setUser({
+            ...authUser,
+            avatarUrl: profile.data.avatarUrl,
+          }),
+        );
+      } catch {
+        dispatch(setUser(authUser));
+      }
+    },
+    [dispatch],
+  );
+
   useEffect(() => {
     if (!user && status === "idle") {
       dispatch(setStatus("loading"));
       if (token) {
         authApi
           .me()
-          .then((u) => {
-            usersApi
-              .me()
-              .then((userData) => {
-                dispatch(
-                  setUser({
-                    ...u,
-                    avatarUrl: userData.data.avatarUrl,
-                  } as AuthenticatedUser),
-                );
-              })
-              .catch(() => {
-                dispatch(setUser(u as AuthenticatedUser));
-              });
-          })
+          .then((u) => hydrateUser(u as AuthenticatedUser))
           .catch(() => {
             requestRefresh()
               .then((newToken) => {
                 if (newToken) {
                   authApi
                     .me()
-                    .then((u) => dispatch(setUser(u as AuthenticatedUser)))
+                    .then((u) => hydrateUser(u as AuthenticatedUser))
                     .catch(() => dispatch(clearCredentials()));
                 } else {
                   dispatch(clearCredentials());
@@ -60,7 +66,7 @@ export function useAuth() {
             if (newToken) {
               authApi
                 .me()
-                .then((u) => dispatch(setUser(u as AuthenticatedUser)))
+                .then((u) => hydrateUser(u as AuthenticatedUser))
                 .catch(() => dispatch(clearCredentials()));
             } else {
               dispatch(clearCredentials());
@@ -69,7 +75,7 @@ export function useAuth() {
           .catch(() => dispatch(clearCredentials()));
       }
     }
-  }, [token, user, status, dispatch]);
+  }, [token, user, status, dispatch, hydrateUser]);
 
   const loginMutation = useMutation({
     mutationFn: (payload: LoginPayload) => authApi.login(payload),
@@ -91,6 +97,7 @@ export function useAuth() {
 
   const registerMutation = useMutation({
     mutationFn: (payload: RegisterPayload) => authApi.register(payload),
+    // Do not dispatch setCredentials on registration so user is routed to OTP verification first
   });
 
   const logout = useCallback(async () => {

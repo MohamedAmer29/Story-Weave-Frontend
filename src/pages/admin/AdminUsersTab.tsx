@@ -15,49 +15,54 @@ import { useLanguage } from "../../i18n";
 import type { UserRole, StoryLibraryItem } from "../../api/types";
 
 export function AdminUsersTab() {
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+
   return (
     <>
-      <AdminUsersTabContent />
-      <UserDetailModal />
+      <AdminUsersTabContent onSelectUser={setSelectedUserId} />
+      <UserDetailModal
+        selectedUserId={selectedUserId}
+        onClose={() => setSelectedUserId(null)}
+      />
     </>
   );
 }
 
-function AdminUsersTabContent() {
+function AdminUsersTabContent({
+  onSelectUser,
+}: {
+  onSelectUser: (userId: string) => void;
+}) {
   const { t } = useLanguage();
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [role, setRole] = useState<"" | UserRole>("");
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
   const query = useQuery({
     queryKey: ["admin", "users", { page, search, role }],
-    queryFn: () => adminApi.listUsers({ page, limit: 10, search: search || undefined, role: role || undefined }),
+    queryFn: () =>
+      adminApi.listUsers({
+        page,
+        limit: 10,
+        search: search || undefined,
+        role: role || undefined,
+      }),
   });
 
-  const userDetailQuery = useQuery({
-    queryKey: ["admin", "user", selectedUserId],
-    queryFn: () => adminApi.getUser(selectedUserId!),
-    enabled: !!selectedUserId,
-  });
-
-  const publicStoriesQuery = useQuery({
-    queryKey: ["admin", "user", selectedUserId, "public-stories"],
-    queryFn: () => usersApi.getPublicStories(selectedUserId!, { page: 1, limit: 10 }),
-    enabled: !!selectedUserId,
-  });
-
-  const invalidate = () => void queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+  const invalidate = () =>
+    void queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
 
   const roleMutation = useMutation({
-    mutationFn: ({ id, newRole }: { id: string; newRole: UserRole }) => adminApi.updateUserRole(id, newRole),
+    mutationFn: ({ id, newRole }: { id: string; newRole: UserRole }) =>
+      adminApi.updateUserRole(id, newRole),
     onSuccess: invalidate,
     onError: (err) => toast.error(getErrorMessage(err) ?? t.common.error),
   });
 
   const activeMutation = useMutation({
-    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) => adminApi.setUserActive(id, isActive),
+    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
+      adminApi.setUserActive(id, isActive),
     onSuccess: invalidate,
     onError: (err) => toast.error(getErrorMessage(err) ?? t.common.error),
   });
@@ -70,7 +75,10 @@ function AdminUsersTabContent() {
       <h2 className="mb-4 text-lg font-bold text-fg">{t.admin.usersTitle}</h2>
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1 sm:max-w-xs">
-          <Search className="absolute start-3.5 top-1/2 size-4 -translate-y-1/2 text-fg-faint" aria-hidden />
+          <Search
+            className="absolute start-3.5 top-1/2 size-4 -translate-y-1/2 text-fg-faint"
+            aria-hidden
+          />
           <Input
             value={search}
             onChange={(e) => {
@@ -81,10 +89,17 @@ function AdminUsersTabContent() {
             className="ps-10"
           />
         </div>
-        <Select value={role} onChange={(e) => { setRole(e.target.value as "" | UserRole); setPage(1); }} className="sm:w-44">
+        <Select
+          value={role}
+          onChange={(e) => {
+            setRole(e.target.value as "" | UserRole);
+            setPage(1);
+          }}
+          className="sm:w-44"
+        >
           <option value="">{t.admin.userRole}</option>
           <option value="USER">USER</option>
-          <option value="MANAGER">MANAGER</option>
+          <option value="AUTHOR">AUTHOR</option>
           <option value="ADMIN">ADMIN</option>
         </Select>
       </div>
@@ -100,16 +115,29 @@ function AdminUsersTabContent() {
           <table className="w-full min-w-[640px] text-start text-sm">
             <thead>
               <tr className="border-b border-border text-xs uppercase tracking-wide text-fg-faint">
-                <th className="px-4 py-3 text-start font-semibold">{t.auth.email}</th>
-                <th className="px-4 py-3 text-start font-semibold">{t.admin.userRole}</th>
-                <th className="px-4 py-3 text-start font-semibold">{t.admin.userStatus}</th>
-                <th className="px-4 py-3 text-start font-semibold">{t.admin.userStories}</th>
-                <th className="px-4 py-3 text-end font-semibold">{"Actions"}</th>
+                <th className="px-4 py-3 text-start font-semibold">
+                  {t.auth.email}
+                </th>
+                <th className="px-4 py-3 text-start font-semibold">
+                  {t.admin.userRole}
+                </th>
+                <th className="px-4 py-3 text-start font-semibold">
+                  {t.admin.userStatus}
+                </th>
+                <th className="px-4 py-3 text-start font-semibold">
+                  {t.admin.userStories}
+                </th>
+                <th className="px-4 py-3 text-end font-semibold">
+                  {"Actions"}
+                </th>
               </tr>
             </thead>
             <tbody>
               {users.map((user) => (
-                <tr key={user.id} className="border-b border-border last:border-0 hover:bg-surface-2/60">
+                <tr
+                  key={user.id}
+                  className="border-b border-border last:border-0 hover:bg-surface-2/60"
+                >
                   <td className="px-4 py-3">
                     <p className="font-medium text-fg">{user.name}</p>
                     <p className="text-xs text-fg-muted">{user.email}</p>
@@ -117,12 +145,17 @@ function AdminUsersTabContent() {
                   <td className="px-4 py-3">
                     <Select
                       value={user.role}
-                      onChange={(e) => roleMutation.mutate({ id: user.id, newRole: e.target.value as UserRole })}
+                      onChange={(e) =>
+                        roleMutation.mutate({
+                          id: user.id,
+                          newRole: e.target.value as UserRole,
+                        })
+                      }
                       className="w-32"
                       aria-label={t.admin.userRole}
                     >
                       <option value="USER">USER</option>
-                      <option value="MANAGER">MANAGER</option>
+                      <option value="AUTHOR">AUTHOR</option>
                       <option value="ADMIN">ADMIN</option>
                     </Select>
                   </td>
@@ -137,7 +170,7 @@ function AdminUsersTabContent() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => setSelectedUserId(user.id)}
+                        onClick={() => onSelectUser(user.id)}
                         aria-label={t.admin.userDetailTitle}
                       >
                         <Eye className="size-4" aria-hidden />
@@ -145,7 +178,12 @@ function AdminUsersTabContent() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => activeMutation.mutate({ id: user.id, isActive: !user.isActive })}
+                        onClick={() =>
+                          activeMutation.mutate({
+                            id: user.id,
+                            isActive: !user.isActive,
+                          })
+                        }
                         loading={activeMutation.isPending}
                       >
                         {user.isActive ? "Deactivate" : "Activate"}
@@ -159,14 +197,24 @@ function AdminUsersTabContent() {
         </div>
       )}
 
-      <Pagination className="mt-6" page={page} totalPages={meta?.totalPages ?? 1} onPageChange={setPage} />
+      <Pagination
+        className="mt-6"
+        page={page}
+        totalPages={meta?.totalPages ?? 1}
+        onPageChange={setPage}
+      />
     </div>
   );
 }
 
-function UserDetailModal() {
+function UserDetailModal({
+  selectedUserId,
+  onClose,
+}: {
+  selectedUserId: string | null;
+  onClose: () => void;
+}) {
   const { t } = useLanguage();
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
   const userDetailQuery = useQuery({
     queryKey: ["admin", "user", selectedUserId],
@@ -176,7 +224,8 @@ function UserDetailModal() {
 
   const publicStoriesQuery = useQuery({
     queryKey: ["admin", "user", selectedUserId, "public-stories"],
-    queryFn: () => usersApi.getPublicStories(selectedUserId!, { page: 1, limit: 10 }),
+    queryFn: () =>
+      usersApi.getPublicStories(selectedUserId!, { page: 1, limit: 10 }),
     enabled: !!selectedUserId,
   });
 
@@ -188,7 +237,7 @@ function UserDetailModal() {
   return (
     <Modal
       open={!!selectedUserId}
-      onClose={() => setSelectedUserId(null)}
+      onClose={onClose}
       title={t.admin.userDetailTitle}
       size="lg"
     >
@@ -202,13 +251,17 @@ function UserDetailModal() {
         <div className="space-y-6">
           <div className="flex items-center gap-4">
             {user.avatarUrl && (
-              <img src={user.avatarUrl} alt={user.name} className="size-16 rounded-full bg-surface-2" />
+              <img
+                src={user.avatarUrl}
+                alt={user.name}
+                className="size-16 rounded-full bg-surface-2"
+              />
             )}
             <div>
               <h3 className="text-lg font-bold text-fg">{user.name}</h3>
               <p className="text-sm text-fg-muted">{user.email}</p>
               <div className="mt-2 flex items-center gap-3">
-                <Badge tone={user.role === "ADMIN" ? "danger" : user.role === "MANAGER" ? "warning" : "neutral"}>
+                <Badge tone={user.role === "ADMIN" ? "danger" : "neutral"}>
                   {user.role}
                 </Badge>
                 <Badge tone={user.isActive ? "success" : "danger"} dot>
@@ -224,7 +277,9 @@ function UserDetailModal() {
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div className="rounded-lg bg-surface-2 p-3">
               <p className="text-fg-faint">{t.auth.createdAt}</p>
-              <p className="font-medium text-fg">{new Date(user.createdAt).toLocaleDateString()}</p>
+              <p className="font-medium text-fg">
+                {new Date(user.createdAt).toLocaleDateString()}
+              </p>
             </div>
             <div className="rounded-lg bg-surface-2 p-3">
               <p className="text-fg-faint">{t.admin.userStories}</p>
@@ -233,7 +288,9 @@ function UserDetailModal() {
           </div>
 
           <div>
-            <h4 className="mb-3 font-semibold text-fg">{t.admin.publicStories}</h4>
+            <h4 className="mb-3 font-semibold text-fg">
+              {t.admin.publicStories}
+            </h4>
             {publicStoriesQuery.isLoading ? (
               <div className="space-y-3">
                 <Skeleton className="h-12" />
@@ -257,7 +314,9 @@ function UserDetailModal() {
                         />
                       )}
                       <div className="min-w-0">
-                        <p className="font-medium text-fg truncate">{story.title}</p>
+                        <p className="font-medium text-fg truncate">
+                          {story.title}
+                        </p>
                         <p className="text-xs text-fg-muted">
                           {story.totalPages} pages · {story.status}
                         </p>

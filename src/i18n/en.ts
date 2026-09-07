@@ -85,7 +85,8 @@ export const en = {
     contextDesc:
       "Guide the visual interpretation with era, location, civilization, and theme.",
     pdfTitle: "PDF / Book Upload",
-    pdfDesc: "Upload a book or PDF and transform its content into an illustrated story.",
+    pdfDesc:
+      "Upload a book or PDF and transform its content into an illustrated story.",
     arabicTitle: "Arabic Support",
     arabicDesc: "Read and create stories in Arabic with proper RTL support.",
     visibilityTitle: "Public & Private Stories",
@@ -95,7 +96,8 @@ export const en = {
     readerTitle: "Story Reader",
     readerDesc: "A beautiful, book-like reading experience.",
     generationTitle: "Generation Tracking",
-    generationDesc: "Watch illustration generation progress and status in real time.",
+    generationDesc:
+      "Watch illustration generation progress and status in real time.",
   },
   storyContext: {
     title: "Context shapes the vision",
@@ -116,8 +118,7 @@ export const en = {
   },
   aiStory: {
     title: "AI works from your story",
-    subtitle:
-      "Your words are illustrated, never replaced.",
+    subtitle: "Your words are illustrated, never replaced.",
     original: "Original Story",
     scene: "Story Scene",
     context: "Story Context",
@@ -150,7 +151,8 @@ export const en = {
     updated: "Recently Updated",
   },
   footer: {
-    tagline: "Turn your stories into worlds with AI-powered illustrated storytelling.",
+    tagline:
+      "Turn your stories into worlds with AI-powered illustrated storytelling.",
     exploreTitle: "Explore",
     resourceTitle: "Resources",
     legalTitle: "Legal",
@@ -195,9 +197,11 @@ export const en = {
   },
   errors: {
     notFoundTitle: "Page not found",
-    notFoundMessage: "The page you are looking for doesn't exist or has been moved.",
+    notFoundMessage:
+      "The page you are looking for doesn't exist or has been moved.",
     errorTitle: "Something went wrong",
-    errorMessage: "An unexpected error occurred. Please try again or return to the home page.",
+    errorMessage:
+      "An unexpected error occurred. Please try again or return to the home page.",
     goHome: "Go to Home",
     goBack: "Go Back",
   },
@@ -293,7 +297,8 @@ export const en = {
     storyTextPh:
       "Write or paste your story here. It will be split into illustrated pages.",
     uploadLabel: "Choose a PDF file",
-    uploadHint: "PDF up to 10 MB. The content will be extracted and illustrated.",
+    uploadHint:
+      "PDF up to 10 MB. The content will be extracted and illustrated.",
     uploading: "Uploading...",
     visualStyle: "Visual Style",
     visualStylePh: "e.g. Watercolor, cinematic, oil painting...",
@@ -422,7 +427,8 @@ export const en = {
     audit: "Audit Log",
     systemTitle: "System Status",
     resetUsage: "Reset AI Usage",
-    resetUsageConfirm: "Reset the current AI usage counters? This cannot be undone.",
+    resetUsageConfirm:
+      "Reset the current AI usage counters? This cannot be undone.",
     usageReset: "AI usage counters reset.",
     revokeOtherSessions: "Revoke Other Sessions",
     revokeOtherSessionsSuccess: "All other sessions revoked successfully.",
@@ -442,7 +448,7 @@ export const en = {
   share: {
     title: "Share Story",
     subtitle: "Give another user access to this story.",
-    userEmail: "Recipient User ID",
+    userEmail: "Recipient email",
     shareAction: "Share",
     shared: "Story shared successfully.",
     sharedWith: "Shared with",
@@ -473,12 +479,14 @@ export const en = {
   },
   session: {
     expiringTitle: "Session Expiring Soon",
-    expiringDesc: "Your 15-minute session will expire in {time}. Extend your session to continue working without interruption.",
+    expiringDesc:
+      "Your 15-minute session will expire in {time}. Extend your session to continue working without interruption.",
     extendAction: "Extend Session",
     extending: "Extending...",
     extendedSuccess: "Session extended successfully for 15 minutes.",
     expiredToast: "Session expired after 15 minutes. Please log in again.",
-    invalidatedToast: "Your session token was invalidated or replaced. Please log in again.",
+    invalidatedToast:
+      "Your session token was invalidated or replaced. Please log in again.",
   },
 };
 

@@ -37,7 +37,7 @@ export type StoryTheme =
   | "CUSTOM"
   | "UNSPECIFIED";
 
-export type UserRole = "USER" | "ADMIN" | "MANAGER";
+export type UserRole = "USER" | "AUTHOR" | "ADMIN";
 export type IllustrationPageStatus =
   | "PENDING"
   | "QUEUED"
@@ -134,6 +134,7 @@ export interface StoryLibraryItem {
   status: StoryStatus;
   sourceType: SourceType;
   storyType?: StoryType | null;
+  author?: { id: string; name: string };
   coverImageUrl?: string;
   totalPages: number;
   illustratedPages: number;
@@ -187,7 +188,10 @@ export interface StoryDetails {
     progress: number;
   };
   pages: StoryPage[];
-  cover: { imageUrl: string | null; imageStatus: IllustrationPageStatus | null };
+  cover: {
+    imageUrl: string | null;
+    imageStatus: IllustrationPageStatus | null;
+  };
   sections: StorySection[];
   createdAt: string;
   updatedAt: string;
@@ -255,6 +259,16 @@ export interface StoryContext {
   customTheme?: string | null;
 }
 
+/** Temporary visual-context changes used for a single regeneration request. */
+export interface VisualContextOverrides {
+  location?: string;
+  era?: StoryEra;
+  year?: number;
+  civilization?: StoryCivilization;
+  theme?: StoryTheme;
+  genre?: StoryType;
+}
+
 export interface CreateStoryInput {
   title: string;
   description?: string;
@@ -310,21 +324,44 @@ export interface AdminDashboardData {
     active: number;
     inactive: number;
     admins: number;
-    managers: number;
+    authors: number;
     consumers: number;
   };
   stories: {
     total: number;
-    byStatus: { draft: number; processing: number; ready: number; failed: number };
+    byStatus: {
+      draft: number;
+      processing: number;
+      ready: number;
+      failed: number;
+    };
     byVisibility: { public: number; private: number; shared: number };
   };
   generations: {
     inFlightStories: number;
-    pageCounts: { total: number; completed: number; failed: number; inFlight: number };
+    pageCounts: {
+      total: number;
+      completed: number;
+      failed: number;
+      inFlight: number;
+    };
     failedPages: number;
   };
-  aiUsage: { used: number; limit: number; remaining: number; percentage: number; blocked: boolean };
-  recentUsers: Array<{ id: string; name: string; email: string; role: UserRole; isActive: boolean; createdAt: string }>;
+  aiUsage: {
+    used: number;
+    limit: number;
+    remaining: number;
+    percentage: number;
+    blocked: boolean;
+  };
+  recentUsers: Array<{
+    id: string;
+    name: string;
+    email: string;
+    role: UserRole;
+    isActive: boolean;
+    createdAt: string;
+  }>;
 }
 
 export interface AdminUser {
@@ -385,7 +422,11 @@ export interface QueueStats {
 export interface SystemHealth {
   status: "ok" | "degraded" | "down";
   timestamp: string;
-  checks: { database: "up" | "down"; redis: "up" | "down"; queue: "up" | "down" };
+  checks: {
+    database: "up" | "down";
+    redis: "up" | "down";
+    queue: "up" | "down";
+  };
 }
 
 export interface AuditMetadata {

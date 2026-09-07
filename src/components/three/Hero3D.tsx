@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { Suspense, useEffect, useMemo, useRef, type ReactNode } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Float, Sparkles } from "@react-three/drei";
 
@@ -242,10 +242,10 @@ function Rig({
       state.current.active = false;
       dom.style.cursor = "";
     };
-    dom.addEventListener("pointerdown", onPointerDown);
-    dom.addEventListener("pointermove", onPointerMove);
-    window.addEventListener("pointerup", onPointerUp);
-    window.addEventListener("pointercancel", onPointerUp);
+    dom.addEventListener("pointerdown", onPointerDown, { passive: true });
+    dom.addEventListener("pointermove", onPointerMove, { passive: true });
+    window.addEventListener("pointerup", onPointerUp, { passive: true });
+    window.addEventListener("pointercancel", onPointerUp, { passive: true });
     return () => {
       dom.removeEventListener("pointerdown", onPointerDown);
       dom.removeEventListener("pointermove", onPointerMove);
@@ -294,8 +294,8 @@ function Scene() {
         intensity={1.6}
         color="#ffffff"
         castShadow
-        shadow-mapSize-width={1024}
-        shadow-mapSize-height={1024}
+        shadow-mapSize-width={512}
+        shadow-mapSize-height={512}
         shadow-camera-left={-2}
         shadow-camera-right={2}
         shadow-camera-top={2}
@@ -329,7 +329,7 @@ function Scene() {
             </Sway>
           </Float>
           <Sparkles
-            count={36}
+            count={24}
             scale={[2.7, 1.9, 2.7]}
             size={2.1}
             speed={0.32}
@@ -381,7 +381,24 @@ function FallbackPreview() {
 }
 
 export default function Hero3D() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isVisible, setIsVisible] = useState(true);
   const webglAvailable = useMemo(() => supportsWebGL(), []);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsVisible(entry.isIntersecting);
+      },
+      { threshold: 0.05 }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   if (!webglAvailable) {
     return <FallbackPreview />;
@@ -389,13 +406,15 @@ export default function Hero3D() {
 
   return (
     <div
-      className="relative h-full w-full cursor-grab touch-none active:cursor-grabbing"
+      ref={containerRef}
+      className="relative h-full w-full cursor-grab touch-none active:cursor-grabbing will-change-transform"
       aria-hidden
     >
       <Canvas
         className="h-full w-full"
+        frameloop={isVisible ? "always" : "never"}
         shadows
-        dpr={[1, 1.5]}
+        dpr={[1, Math.min(typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1, 1.5)]}
         gl={{ antialias: true, powerPreference: "low-power" }}
         camera={{ position: [0, 0.2, 3.6], fov: 38 }}
         style={{ width: "100%", height: "100%", display: "block" }}

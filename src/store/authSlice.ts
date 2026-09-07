@@ -6,7 +6,7 @@ export interface User {
   lastName: string;
   name?: string | null;
   email: string;
-  role: "USER" | "ADMIN" | "MANAGER";
+  role: "USER" | "AUTHOR" | "ADMIN";
   emailVerified: boolean;
   avatarUrl?: string | null;
   isActive?: boolean;
@@ -33,7 +33,7 @@ const authSlice = createSlice({
   reducers: {
     setCredentials(
       state,
-      action: PayloadAction<{ token: string; user: AuthenticatedUser }>
+      action: PayloadAction<{ token: string; user: AuthenticatedUser }>,
     ) {
       const now = Date.now();
       state.token = action.payload.token;

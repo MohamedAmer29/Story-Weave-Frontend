@@ -40,21 +40,41 @@ export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   error?: string;
   hint?: string;
+  startIcon?: ReactNode;
+  endIcon?: ReactNode;
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
-  { label, error, hint, id, required, className, ...rest },
+  { label, error, hint, id, required, className, startIcon, endIcon, ...rest },
   ref
 ) {
   return (
     <Field label={label} error={error} hint={hint} id={id} required={required}>
-      <input
-        ref={ref}
-        id={id}
-        aria-invalid={Boolean(error)}
-        className={cn(baseField, error && invalidField, className)}
-        {...rest}
-      />
+      <div className="relative">
+        {startIcon && (
+          <div className="pointer-events-none absolute start-3.5 top-1/2 -translate-y-1/2 text-fg-faint">
+            {startIcon}
+          </div>
+        )}
+        <input
+          ref={ref}
+          id={id}
+          aria-invalid={Boolean(error)}
+          className={cn(
+            baseField,
+            startIcon ? "ps-10" : "",
+            endIcon ? "pe-10" : "",
+            error ? invalidField : "",
+            className
+          )}
+          {...rest}
+        />
+        {endIcon && (
+          <div className="absolute end-3.5 top-1/2 -translate-y-1/2 flex items-center">
+            {endIcon}
+          </div>
+        )}
+      </div>
     </Field>
   );
 });

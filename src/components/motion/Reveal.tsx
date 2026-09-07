@@ -14,8 +14,8 @@ export function Reveal({
   children,
   className,
   delay = 0,
-  y = 36,
-  duration = 0.9,
+  y = 30,
+  duration = 0.8,
   ...rest
 }: RevealProps) {
   const ref = useRef<HTMLDivElement>(null);
@@ -34,19 +34,20 @@ export function Reveal({
           duration,
           delay,
           ease: revealEase,
+          clearProps: "transform",
           scrollTrigger: {
             trigger: el,
-            start: "top 88%",
+            start: "top 90%",
             once: true,
           },
-        },
+        }
       );
     },
-    { scope: ref },
+    { scope: ref }
   );
 
   return (
-    <div ref={ref} className={className} {...rest}>
+    <div ref={ref} className={cn("will-change-transform", className)} {...rest}>
       {children}
     </div>
   );
@@ -64,8 +65,8 @@ export function RevealStagger({
   children,
   className,
   itemSelector = ":scope > *",
-  y = 32,
-  stagger = 0.08,
+  y = 28,
+  stagger = 0.07,
 }: RevealStaggerProps) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -82,22 +83,23 @@ export function RevealStagger({
         {
           y: 0,
           opacity: 1,
-          duration: 0.8,
+          duration: 0.75,
           stagger,
           ease: revealEase,
+          clearProps: "transform",
           scrollTrigger: {
             trigger: el,
-            start: "top 86%",
+            start: "top 88%",
             once: true,
           },
-        },
+        }
       );
     },
-    { scope: ref },
+    { scope: ref }
   );
 
   return (
-    <div ref={ref} className={className}>
+    <div ref={ref} className={cn("will-change-transform", className)}>
       {children}
     </div>
   );
@@ -106,7 +108,7 @@ export function RevealStagger({
 export function Magnetic({
   children,
   className,
-  strength = 18,
+  strength = 16,
 }: {
   children: ReactNode;
   className?: string;
@@ -118,8 +120,9 @@ export function Magnetic({
     () => {
       const el = ref.current;
       if (!el || prefersReducedMotion()) return;
-      const xTo = gsap.quickTo(el, "x", { duration: 0.4, ease: "power3.out" });
-      const yTo = gsap.quickTo(el, "y", { duration: 0.4, ease: "power3.out" });
+      
+      const xTo = gsap.quickTo(el, "x", { duration: 0.25, ease: "power2.out" });
+      const yTo = gsap.quickTo(el, "y", { duration: 0.25, ease: "power2.out" });
 
       const onMove = (event: MouseEvent) => {
         const rect = el.getBoundingClientRect();
@@ -130,18 +133,24 @@ export function Magnetic({
       };
 
       const onLeave = () => {
-        xTo(0);
-        yTo(0);
+        gsap.to(el, {
+          x: 0,
+          y: 0,
+          duration: 0.5,
+          ease: "back.out(1.5)",
+          overwrite: "auto",
+        });
       };
 
-      el.addEventListener("mousemove", onMove);
-      el.addEventListener("mouseleave", onLeave);
+      el.addEventListener("mousemove", onMove, { passive: true });
+      el.addEventListener("mouseleave", onLeave, { passive: true });
+
       return () => {
         el.removeEventListener("mousemove", onMove);
         el.removeEventListener("mouseleave", onLeave);
       };
     },
-    { scope: ref },
+    { scope: ref }
   );
 
   return (

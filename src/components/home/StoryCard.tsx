@@ -16,6 +16,7 @@ import {
 interface StoryCardProps {
   story: StoryLibraryItem | StoryResponse;
   authorName?: string;
+  authorId?: string;
   footer?: React.ReactNode;
 }
 
@@ -56,7 +57,7 @@ function CardCover({
   );
 }
 
-export function StoryCard({ story, authorName, footer }: StoryCardProps) {
+export function StoryCard({ story, authorName, authorId, footer }: StoryCardProps) {
   const { t } = useLanguage();
 
   const anyStory = story as unknown as Record<string, unknown>;
@@ -86,6 +87,8 @@ export function StoryCard({ story, authorName, footer }: StoryCardProps) {
   });
 
   const imageSrc = coverSrc ?? fallbackCover ?? null;
+  const resolvedAuthorName = authorName ?? ("author" in story ? story.author?.name : undefined);
+  const resolvedAuthorId = authorId ?? ("author" in story ? story.author?.id : undefined);
 
   return (
     <Card interactive className="story-card group flex flex-col overflow-hidden">
@@ -119,13 +122,19 @@ export function StoryCard({ story, authorName, footer }: StoryCardProps) {
               {story.description}
             </p>
           )}
-          {authorName && (
-            <p className="text-xs text-fg-faint">
-              {t.explore.byAuthor.replace("{author}", authorName)}
-            </p>
-          )}
         </div>
       </Link>
+
+      {resolvedAuthorName && resolvedAuthorId && (
+        <div className="px-5 pb-4 text-xs text-fg-faint">
+          <Link
+            to={`/author/${resolvedAuthorId}`}
+            className="font-medium text-brand-600 hover:underline dark:text-brand-400"
+          >
+            {t.explore.byAuthor.replace("{author}", resolvedAuthorName)}
+          </Link>
+        </div>
+      )}
 
       <div className="mt-auto flex items-center justify-between border-t border-border px-5 py-3 text-xs text-fg-muted">
         <span className="inline-flex items-center gap-1.5">

@@ -59,12 +59,12 @@ export function DashboardPage() {
   const { t } = useLanguage();
   const navigate = useNavigate();
 
-  const { status } = useAuth();
+  const { status, user } = useAuth();
 
   const query = useQuery({
-    queryKey: ["dashboard"],
+    queryKey: ["dashboard", user?.id],
     queryFn: dashboardApi.get,
-    enabled: status === "authenticated",
+    enabled: status === "authenticated" && Boolean(user?.id),
   });
 
   useContentLoading(query.isLoading);

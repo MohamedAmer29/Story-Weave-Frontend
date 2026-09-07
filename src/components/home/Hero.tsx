@@ -41,7 +41,14 @@ export function Hero() {
         gsap.fromTo(
           visualRef.current,
           { y: 40, scale: 0.96, opacity: 0 },
-          { y: 0, scale: 1, opacity: 1, duration: 1.1, delay: 0.16, ease: revealEase },
+          {
+            y: 0,
+            scale: 1,
+            opacity: 1,
+            duration: 1.1,
+            delay: 0.16,
+            ease: revealEase,
+          },
         );
         gsap.to(visualRef.current, {
           y: 10,
@@ -68,7 +75,10 @@ export function Hero() {
       className="relative isolate min-h-[calc(100svh-4.5rem)] overflow-hidden"
     >
       <div className="hero-aurora absolute inset-0" aria-hidden />
-      <div className="page-grain pointer-events-none absolute inset-0" aria-hidden />
+      <div
+        className="page-grain pointer-events-none absolute inset-0"
+        aria-hidden
+      />
       <div className="relative mx-auto grid min-h-[calc(100svh-4.5rem)] max-w-7xl items-center gap-8 px-4 py-10 sm:gap-12 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:px-8 lg:py-16">
         <div className="mx-auto max-w-xl text-center sm:mx-0 sm:text-start">
           <div data-hero-intro>
@@ -118,7 +128,12 @@ export function Hero() {
             className="mt-7 flex w-full flex-col justify-center gap-3 sm:mt-9 sm:flex-row sm:justify-start"
           >
             <Magnetic className="w-full sm:w-auto">
-              <Button size="lg" fullWidth className="rounded-full sm:w-auto" onClick={goCreate}>
+              <Button
+                size="lg"
+                fullWidth
+                className="rounded-full sm:w-auto"
+                onClick={goCreate}
+              >
                 {t.hero.createStory}
                 <ArrowUpRight className="size-4" aria-hidden />
               </Button>
@@ -143,7 +158,10 @@ export function Hero() {
           className="relative h-[16.5rem] sm:h-[26rem] lg:h-[34rem]"
           key={isCompact ? "mobile" : "desktop"}
         >
-          <div className="absolute inset-0 flex items-center justify-center" aria-hidden>
+          <div
+            className="absolute inset-0 flex items-center justify-center"
+            aria-hidden
+          >
             <div className="size-56 rounded-full bg-brand-500/16 blur-3xl" />
           </div>
           <div
@@ -152,7 +170,6 @@ export function Hero() {
           >
             <div className="absolute inset-x-6 top-5 z-10 flex flex-col items-center gap-1.5 text-[0.6rem] font-semibold uppercase text-label-rhythm text-fg-faint/80 sm:inset-x-8 sm:top-6 sm:flex-row sm:justify-between sm:text-[0.62rem] sm:tracking-[0.25em]">
               <span>StoryForge</span>
-              <span>Ancient Egypt</span>
             </div>
             <div className="relative h-full w-full overflow-hidden bg-[radial-gradient(circle_at_70%_20%,rgba(199,155,75,0.12),transparent_27%),linear-gradient(135deg,#faefe1,#f1e2cf)] dark:bg-[radial-gradient(circle_at_70%_20%,rgba(199,155,75,0.1),transparent_27%),linear-gradient(135deg,#241e1a,#1d1814)]">
               <div className="relative h-full w-full" dir="ltr">

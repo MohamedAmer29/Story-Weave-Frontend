@@ -4,10 +4,8 @@ import { buildResponsiveSrcSet } from "../../utils/imageSrcSet";
 
 type AvatarSize = "sm" | "md" | "lg" | "xl";
 
-export interface AvatarProps extends Omit<
-  ImgHTMLAttributes<HTMLImageElement>,
-  "src"
-> {
+export interface AvatarProps
+  extends Omit<ImgHTMLAttributes<HTMLImageElement>, "src"> {
   src?: string | null;
   name?: string;
   size?: AvatarSize;
@@ -30,16 +28,16 @@ export const Avatar = forwardRef<HTMLImageElement, AvatarProps>(function Avatar(
   { src, name, size = "md", className, alt, ...rest },
   ref,
 ) {
-  const [failed, setFailed] = useState(false);
-  const showImage = !!src && !failed;
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  const showImage = !!src && failedSrc !== src;
 
   return showImage ? (
     <img
       ref={ref}
       src={src}
       alt={alt ?? name ?? "avatar"}
-      loading="lazy"
-      onError={() => setFailed(true)}
+      loading="eager"
+      onError={() => setFailedSrc(src ?? null)}
       srcSet={buildResponsiveSrcSet(src) ?? undefined}
       className={cn(
         "rounded-full border border-border object-cover",
