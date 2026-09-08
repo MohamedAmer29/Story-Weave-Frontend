@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ArrowDown, ArrowUp, Trash2 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -7,6 +8,7 @@ import { toast } from "react-toastify";
 import { storiesApi } from "../api/storiesApi";
 import { Card, CardBody, CardHeader } from "../components/ui/Card";
 import { Input, Select, Textarea } from "../components/ui/field";
+import { CatalogSelect } from "../components/ui/CatalogSelect";
 import { CivilizationSelect } from "../components/ui/CivilizationSelect";
 import { Button } from "../components/ui/Button";
 import { PageLoader } from "../components/ui/Skeleton";
@@ -16,6 +18,13 @@ import { getErrorMessage } from "../api/axios";
 import { useAuth } from "../hooks/useAuth";
 import { useLanguage } from "../i18n";
 import { isCustomCivilization } from "../constants/civilizations";
+import {
+  useStoryCivilizations,
+  useStoryEras,
+  useStoryGenres,
+  useCatalogs,
+} from "../hooks/useStoryOptions";
+import { humanize, isCatalogId, resolveCatalogEntry } from "../lib/storyCatalog";
 import type {
   StoryCivilization,
   StoryEra,
@@ -24,7 +33,7 @@ import type {
   StoryVisibility,
 } from "../api/types";
 
-const storyTypes: StoryType[] = [
+const legacyStoryTypes: StoryType[] = [
   "FANTASY",
   "ADVENTURE",
   "SCI_FI",
@@ -39,7 +48,7 @@ const storyTypes: StoryType[] = [
   "ACTION",
   "THRILLER",
 ];
-const eras: StoryEra[] = ["BCE", "CE", "MODERN", "UNSPECIFIED"];
+const legacyEras: StoryEra[] = ["BCE", "CE", "MODERN", "UNSPECIFIED"];
 const languages: string[] = ["ARABIC", "ENGLISH"];
 const themes: StoryTheme[] = [
   "UNSPECIFIED",
@@ -57,24 +66,18 @@ const themes: StoryTheme[] = [
   "CUSTOM",
 ];
 
-function humanize(value: string): string {
-  return value
-    .toLowerCase()
-    .split("_")
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(" ");
-}
+const MAX_PAGE_CHARACTERS = 1000;
 
 interface EditForm {
   title: string;
   description: string;
-  storyType: StoryType;
+  genreId: string;
   visualStyle: string;
   language: string;
-  era: StoryEra;
+  eraId: string;
   year: string;
   location: string;
-  civilization: StoryCivilization;
+  civilization: string;
   customCivilization: string;
   theme: StoryTheme;
   customTheme: string;
@@ -90,15 +93,44 @@ export function EditStoryPage() {
   const queryClient = useQueryClient();
 
   const query = useStoryQuery(storyId);
+  const pagesQuery = useQuery({ queryKey: ["story-pages", storyId], queryFn: () => storiesApi.getPages(storyId) });
+  const [appendText, setAppendText] = useState("");
+  const [appendFile, setAppendFile] = useState<File | null>(null);
+
+  const genresQuery = useStoryGenres();
+  const erasQuery = useStoryEras();
+  const civQuery = useStoryCivilizations();
+  const catalogs = useCatalogs(
+    {
+      genres: genresQuery,
+      eras: erasQuery,
+      civilizations: civQuery,
+    },
+    {
+      genres: legacyStoryTypes,
+      eras: legacyEras,
+    },
+  );
+
+  const legacyGenreOptions = legacyStoryTypes.map((s) => ({
+    value: s,
+    label: humanize(s),
+    legacyValue: s,
+  }));
+  const legacyEraOptions = legacyEras.map((e) => ({
+    value: e,
+    label: e === "UNSPECIFIED" ? "—" : humanize(e),
+    legacyValue: e,
+  }));
 
   const form = useForm<EditForm>({
     defaultValues: {
       title: "",
       description: "",
-      storyType: "FANTASY",
+      genreId: "",
       visualStyle: "",
       language: "",
-      era: "UNSPECIFIED",
+      eraId: "",
       year: "",
       location: "",
       civilization: "UNSPECIFIED",
@@ -117,22 +149,32 @@ export function EditStoryPage() {
     watch,
     formState: { errors },
   } = form;
+  const genreId = watch("genreId");
+  const eraId = watch("eraId");
   const civilization = watch("civilization");
   const theme = watch("theme");
   const [saving, setSaving] = useState(false);
+  const [pageDrafts, setPageDrafts] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (query.data) {
+      const genreOption =
+        catalogs.genres.find((o) => o.value === query.data?.genreId) ??
+        catalogs.genres.find((o) => o.legacyValue === query.data?.storyType);
+      const eraOption =
+        catalogs.eras.find((o) => o.value === query.data?.eraId) ??
+        catalogs.eras.find((o) => o.legacyValue === query.data?.era);
       reset({
         title: query.data.title,
         description: query.data.description ?? "",
-        storyType: query.data.storyType ?? "FANTASY",
+        genreId: genreOption?.value ?? query.data.storyType ?? "",
         visualStyle: query.data.visualStyle ?? "",
         language: query.data.language ?? "",
-        era: query.data.era ?? "UNSPECIFIED",
+        eraId: eraOption?.value ?? query.data.era ?? "UNSPECIFIED",
         year: query.data.year != null ? String(query.data.year) : "",
         location: query.data.location ?? "",
-        civilization: query.data.civilization ?? "UNSPECIFIED",
+        civilization:
+          query.data.civilizationId ?? query.data.civilization ?? "UNSPECIFIED",
         customCivilization: query.data.customCivilization ?? "",
         theme: query.data.theme ?? "UNSPECIFIED",
         customTheme: query.data.customTheme ?? "",
@@ -141,30 +183,63 @@ export function EditStoryPage() {
     }
   }, [query.data, reset]);
 
+  useEffect(() => {
+    if (pagesQuery.data) setPageDrafts(Object.fromEntries(pagesQuery.data.map((page) => [page.id, page.content])));
+  }, [pagesQuery.data]);
+
+  const refreshPages = () => void queryClient.invalidateQueries({ queryKey: ["story-pages", storyId] });
+  const savePage = async (pageId: string) => { await storiesApi.updatePage(storyId, pageId, pageDrafts[pageId] ?? ""); refreshPages(); toast.success(t.common.save); };
+  const movePage = async (pageId: string, direction: -1 | 1) => {
+    const pages = pagesQuery.data ?? [];
+    const index = pages.findIndex((page) => page.id === pageId);
+    const target = index + direction;
+    if (index < 0 || target < 0 || target >= pages.length) return;
+    const pageIds = pages.map((page) => page.id);
+    [pageIds[index], pageIds[target]] = [pageIds[target], pageIds[index]];
+    await storiesApi.reorderPages(storyId, pageIds);
+    refreshPages();
+  };
+  const removePage = async (pageId: string) => {
+    if (!window.confirm("Delete this page?")) return;
+    await storiesApi.deletePage(storyId, pageId);
+    refreshPages();
+    toast.success(t.common.save);
+  };
+
   const isOwner = Boolean(user && user.id === query.data?.author.id);
 
   const onSubmit = handleSubmit(async (values) => {
     setSaving(true);
     try {
+      const genre = resolveCatalogEntry(values.genreId, catalogs.genres, legacyGenreOptions);
+      const era = resolveCatalogEntry(values.eraId, catalogs.eras, legacyEraOptions);
+      const civilizationOption = catalogs.civilizations.find(
+        (c) => c.value === values.civilization || c.legacyValue === values.civilization,
+      );
       const updated = await storiesApi.update(storyId, {
         title: values.title,
         description: values.description || undefined,
-        storyType: values.storyType,
+        storyType: genre ? (genre.legacyValue as StoryType) : undefined,
+        genreId: genre && isCatalogId(genre.id) ? genre.id : undefined,
+        eraId: era && isCatalogId(era.id) ? era.id : undefined,
+        era: era ? (era.legacyValue as StoryEra) : undefined,
         visualStyle: values.visualStyle || undefined,
         language: values.language || undefined,
-        era: values.era === "UNSPECIFIED" ? undefined : values.era,
         year: values.year ? Number(values.year) : undefined,
         location: values.location || undefined,
         civilization:
-          values.civilization === "UNSPECIFIED"
+          values.civilization === "UNSPECIFIED" || isCatalogId(values.civilization)
             ? undefined
-            : values.civilization,
+            : (values.civilization as StoryCivilization),
         customCivilization:
           isCustomCivilization(values.civilization)
             ? values.customCivilization
             : undefined,
         theme: values.theme === "UNSPECIFIED" ? undefined : values.theme,
         customTheme: values.theme === "CUSTOM" ? values.customTheme : undefined,
+        civilizationId: isCatalogId(civilizationOption?.value)
+          ? civilizationOption?.value
+          : undefined,
         visibility: values.visibility,
       });
 
@@ -243,19 +318,20 @@ export function EditStoryPage() {
                     required: t.validation.titleRequired,
                   })}
                 />
-                <Select
+                <CatalogSelect
                   label={t.create.storyType}
-                  value={watch("storyType")}
-                  onChange={(e) =>
-                    setValue("storyType", e.target.value as StoryType)
-                  }
-                >
-                  {storyTypes.map((s) => (
-                    <option key={s} value={s}>
-                      {humanize(s)}
-                    </option>
-                  ))}
-                </Select>
+                  value={genreId}
+                  onChange={(v) => setValue("genreId", v)}
+                  options={catalogs.genres.map((o) => ({
+                    value: o.value,
+                    label: o.label,
+                  }))}
+                  legacyOptions={legacyGenreOptions.map((o) => ({
+                    value: o.value,
+                    label: o.label,
+                  }))}
+                  loading={genresQuery.isLoading && !catalogs.genresFallback}
+                />
               </div>
               <Textarea
                 label={t.create.description}
@@ -287,6 +363,82 @@ export function EditStoryPage() {
           </Card>
 
           <Card>
+            <CardHeader><h2 className="text-base font-bold text-fg">Story pages</h2></CardHeader>
+            <CardBody className="space-y-5 p-6">
+              {pagesQuery.data?.map((page) => (
+                <div key={page.id} className="space-y-2 rounded-lg border border-border p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-sm font-semibold text-fg-muted">
+                    <span>Page {page.pageNumber}</span>
+                    <div className="flex items-center gap-2">
+                      <Button type="button" variant="outline" size="sm" aria-label="Move page up" disabled={page.pageNumber === 1} onClick={() => void movePage(page.id, -1)}><ArrowUp className="size-4" /></Button>
+                      <Button type="button" variant="outline" size="sm" aria-label="Move page down" disabled={page.pageNumber === (pagesQuery.data?.length ?? 0)} onClick={() => void movePage(page.id, 1)}><ArrowDown className="size-4" /></Button>
+                      <Button type="button" variant="outline" size="sm" onClick={() => void savePage(page.id)}>Save page</Button>
+                      <Button type="button" variant="outline" size="sm" aria-label="Delete page" onClick={() => void removePage(page.id)}><Trash2 className="size-4 text-red-600" /></Button>
+                    </div>
+                  </div>
+                  <Textarea
+                    rows={6}
+                    maxLength={MAX_PAGE_CHARACTERS}
+                    value={pageDrafts[page.id] ?? page.content}
+                    onChange={(e) =>
+                      setPageDrafts((current) => ({
+                        ...current,
+                        [page.id]: e.target.value,
+                      }))
+                    }
+                  />
+                  <p className="text-end text-xs text-fg-muted">
+                    {(pageDrafts[page.id] ?? page.content).length}/
+                    {MAX_PAGE_CHARACTERS}
+                  </p>
+                  {page.imageStatus === "PENDING" && <p className="text-xs text-fg-muted">Illustration needs regeneration after this edit.</p>}
+                </div>
+              ))}
+              <Textarea
+                label="Append new text"
+                rows={4}
+                maxLength={100000}
+                value={appendText}
+                onChange={(e) => setAppendText(e.target.value)}
+              />
+              <div className="space-y-2">
+                <input
+                  type="file"
+                  accept="application/pdf,.pdf"
+                  onChange={(e) => setAppendFile(e.target.files?.[0] ?? null)}
+                  className="block w-full text-sm text-fg-muted file:me-3 file:rounded-md file:border-0 file:bg-brand-500/10 file:px-3 file:py-2 file:text-sm file:font-medium file:text-brand-700 hover:file:bg-brand-500/15 dark:file:text-brand-300"
+                  aria-label="Upload continuation PDF"
+                />
+                <div className="flex items-center justify-between text-xs text-fg-muted">
+                  <span>Enter text or upload a PDF continuation.</span>
+                  <span>{appendText.length}/100000</span>
+                </div>
+              </div>
+              <Button
+                type="button"
+                disabled={
+                  (!appendText.trim() && !appendFile) ||
+                  (Boolean(appendText.trim()) && Boolean(appendFile))
+                }
+                onClick={async () => {
+                  if (!appendText.trim() && !appendFile) return;
+                  if (appendText.trim() && appendFile) return;
+                  await storiesApi.append(storyId, {
+                    content: appendText.trim() || undefined,
+                    file: appendFile ?? undefined,
+                  });
+                  setAppendText("");
+                  setAppendFile(null);
+                  refreshPages();
+                  toast.success(t.common.save);
+                }}
+              >
+                Append text
+              </Button>
+            </CardBody>
+          </Card>
+
+          <Card>
             <CardHeader>
               <h2 className="text-base font-bold text-fg">{t.nav.features}</h2>
             </CardHeader>
@@ -300,22 +452,26 @@ export function EditStoryPage() {
                   {...register("year")}
                 />
                 <Input label={t.create.location} {...register("location")} />
-                <Select
+                <CatalogSelect
                   label={t.create.era}
-                  value={watch("era")}
-                  onChange={(e) => setValue("era", e.target.value as StoryEra)}
-                >
-                  {eras.map((e) => (
-                    <option key={e} value={e}>
-                      {e === "UNSPECIFIED" ? "—" : humanize(e)}
-                    </option>
-                  ))}
-                </Select>
+                  value={eraId}
+                  onChange={(v) => setValue("eraId", v)}
+                  options={catalogs.eras.map((o) => ({
+                    value: o.value,
+                    label: o.legacyValue === "UNSPECIFIED" ? "—" : o.label,
+                  }))}
+                  legacyOptions={legacyEraOptions.map((o) => ({
+                    value: o.value,
+                    label: o.label,
+                  }))}
+                  loading={erasQuery.isLoading && !catalogs.erasFallback}
+                />
                 <CivilizationSelect
                   label={t.create.civilization}
                   value={watch("civilization")}
                   onChange={(v) => setValue("civilization", v)}
                   searchPlaceholder={t.create.civilizationSearch}
+                  options={catalogs.civilizations}
                 />
                 {isCustomCivilization(civilization) && (
                   <Input

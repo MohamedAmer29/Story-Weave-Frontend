@@ -19,6 +19,7 @@ export interface LibraryQuery {
   status?: string;
   visibility?: string;
   sourceType?: string;
+  storyType?: string;
 }
 
 export const usersApi = {

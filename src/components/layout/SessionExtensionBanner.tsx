@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Clock, RefreshCw } from "lucide-react";
 import { toast } from "react-toastify";
@@ -6,7 +6,7 @@ import { authApi } from "../../api/authApi";
 import { useAppDispatch, useAppSelector } from "../../store";
 import { clearCredentials, setToken } from "../../store/authSlice";
 import { useLanguage } from "../../i18n";
-import { getErrorMessage, requestRefresh } from "../../api/axios";
+import { getErrorMessage } from "../../api/axios";
 
 const SESSION_DURATION_MS = 15 * 60 * 1000; // 15 minutes
 const WARNING_THRESHOLD_MS = 3 * 60 * 1000; // 3 minutes warning
@@ -18,11 +18,10 @@ export function SessionExtensionBanner() {
   const { user, token, tokenIssuedAt } = useAppSelector((state) => state.auth);
 
   const [remainingMs, setRemainingMs] = useState<number | null>(null);
-  const automaticRefreshInFlight = useRef(false);
 
   useEffect(() => {
     if (!user || !token || !tokenIssuedAt) {
-      // Clear the countdown when authentication state is reset externally.
+      // Clear remaining countdown when logged out
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setRemainingMs(null);
       return;
@@ -33,19 +32,11 @@ export function SessionExtensionBanner() {
       const left = expiresAt - Date.now();
       if (left <= 0) {
         setRemainingMs(0);
-        if (!automaticRefreshInFlight.current) {
-          automaticRefreshInFlight.current = true;
-          void requestRefresh()
-            .then((newToken) => {
-              if (!newToken) {
-                dispatch(clearCredentials());
-                toast.warn(t.session.expiredToast);
-              }
-            })
-            .finally(() => {
-              automaticRefreshInFlight.current = false;
-            });
-        }
+        // User did not extend session within 15 minutes -> log out user
+        void authApi.logout().catch(() => {});
+        dispatch(clearCredentials());
+        queryClient.clear();
+        toast.warn(t.session.expiredToast);
       } else {
         setRemainingMs(left);
       }
@@ -54,7 +45,7 @@ export function SessionExtensionBanner() {
     checkTime();
     const interval = setInterval(checkTime, 1000);
     return () => clearInterval(interval);
-  }, [user, token, tokenIssuedAt, dispatch, t]);
+  }, [user, token, tokenIssuedAt, dispatch, queryClient, t]);
 
   const extendMutation = useMutation({
     mutationFn: () => authApi.refreshToken(),
@@ -65,7 +56,9 @@ export function SessionExtensionBanner() {
     },
     onError: (err) => {
       toast.error(getErrorMessage(err) ?? t.common.error);
+      void authApi.logout().catch(() => {});
       dispatch(clearCredentials());
+      queryClient.clear();
     },
   });
 

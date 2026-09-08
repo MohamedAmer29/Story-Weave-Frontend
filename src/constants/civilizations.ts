@@ -405,6 +405,21 @@ export const CIVILIZATIONS_BY_REGION: CivilizationRegionGroup[] = [
     { value: "DESERT_FANTASY", label: "Desert Fantasy", kind: "specific" },
     { value: "MYTHOLOGICAL_FANTASY", label: "Mythological Fantasy", kind: "specific" },
     { value: "STEAMPUNK_CIVILIZATION", label: "Steampunk Civilization", kind: "specific" },
+    { value: "MIDDLE_EARTH", label: "Middle-earth", kind: "specific" },
+    { value: "HOBBIT", label: "Hobbit", kind: "specific" },
+    { value: "GONDOR", label: "Gondor", kind: "specific" },
+    { value: "ROHAN", label: "Rohan", kind: "specific" },
+    { value: "MORDOR", label: "Mordor", kind: "specific" },
+    { value: "ELVEN_MIDDLE_EARTH", label: "Elven (Middle-earth)", kind: "specific" },
+    { value: "DWARVEN_MIDDLE_EARTH", label: "Dwarven (Middle-earth)", kind: "specific" },
+    { value: "ISENGARD", label: "Isengard", kind: "specific" },
+    { value: "NUMENOREAN", label: "Númenórean", kind: "specific" },
+    { value: "GONDORIAN", label: "Gondorian", kind: "specific" },
+    { value: "ROHIRRIM", label: "Rohirrim", kind: "specific" },
+    { value: "ORC_MIDDLE_EARTH", label: "Orc (Middle-earth)", kind: "specific" },
+    { value: "URUK_HAI", label: "Uruk-hai", kind: "specific" },
+    { value: "OTHER_MIDDLE_EARTH", label: "Other Middle-earth", kind: "other" },
+    { value: "CUSTOM_MIDDLE_EARTH", label: "Custom Middle-earth", kind: "custom" },
     { value: "CUSTOM_FANTASY_CIVILIZATION", label: "Custom Fantasy Civilization", kind: "custom" },
     ],
   },
@@ -750,6 +765,21 @@ export type StoryCivilization =
   | "DESERT_FANTASY"
   | "MYTHOLOGICAL_FANTASY"
   | "STEAMPUNK_CIVILIZATION"
+  | "MIDDLE_EARTH"
+  | "HOBBIT"
+  | "GONDOR"
+  | "ROHAN"
+  | "MORDOR"
+  | "ELVEN_MIDDLE_EARTH"
+  | "DWARVEN_MIDDLE_EARTH"
+  | "ISENGARD"
+  | "NUMENOREAN"
+  | "GONDORIAN"
+  | "ROHIRRIM"
+  | "ORC_MIDDLE_EARTH"
+  | "URUK_HAI"
+  | "OTHER_MIDDLE_EARTH"
+  | "CUSTOM_MIDDLE_EARTH"
   | "CUSTOM_FANTASY_CIVILIZATION"
   | "OTHER"
   | "CUSTOM"

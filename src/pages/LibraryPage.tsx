@@ -44,7 +44,7 @@ export function LibraryPage() {
         search: search || undefined,
         status: status || undefined,
         visibility: visibility || undefined,
-        sourceType: storyType || undefined,
+        storyType: storyType || undefined,
       }),
     enabled: tab === "mine",
   });

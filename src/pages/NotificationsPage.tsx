@@ -9,6 +9,7 @@ import type { NotificationItem } from "../api/types";
 import { useNotifications } from "../hooks/useNotifications";
 import { Button } from "../components/ui/Button";
 import { Badge } from "../components/ui/Badge";
+import { ConfirmDialog } from "../components/ui/ConfirmDialog";
 import { EmptyState, ErrorState } from "../components/ui/States";
 import { PageLoader } from "../components/ui/Skeleton";
 import { useContentLoading } from "../layouts/PageLoading";
@@ -23,6 +24,7 @@ export function NotificationsPage() {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [unreadOnly, setUnreadOnly] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<NotificationItem | null>(null);
 
   const { data, isLoading, isError, refetch, invalidate } = useNotifications({
     page,
@@ -53,6 +55,7 @@ export function NotificationsPage() {
     mutationFn: (id: string) => notificationsApi.remove(id),
     onSuccess: () => {
       toast.success(t.notifications.deleted);
+      setDeleteTarget(null);
       invalidate();
       void queryClient.invalidateQueries({ queryKey: ["notifications", "unread-count"] });
     },
@@ -181,7 +184,7 @@ export function NotificationsPage() {
                         className="text-fg-muted hover:text-red-600"
                         onClick={(e) => {
                           e.stopPropagation();
-                          deleteMutation.mutate(notif.id);
+                          setDeleteTarget(notif);
                         }}
                       >
                         <Trash2 className="size-4" />
@@ -198,6 +201,15 @@ export function NotificationsPage() {
           <Pagination className="mt-8" page={page} totalPages={data.meta.totalPages} onPageChange={setPage} />
         )}
       </section>
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        title={t.notifications.delete}
+        message={t.notifications.confirmDeleteMessage}
+        loading={deleteMutation.isPending}
+        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </>
   );
 }

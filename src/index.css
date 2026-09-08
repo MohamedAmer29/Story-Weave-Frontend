@@ -134,25 +134,56 @@ button:disabled,
   font-family: var(--font-display);
 }
 
-.text-display-tight {
-  letter-spacing: var(--tracking-display);
+@layer base {
+  :where(h1, h2, h3, h4, h5, h6) {
+    letter-spacing: var(--tracking-display);
+  }
+
+  :where(p, li, figcaption, blockquote, dt, dd) {
+    letter-spacing: var(--tracking-copy);
+    word-spacing: var(--word-spacing-copy);
+    line-height: 1.7;
+  }
+
+  :where(::placeholder) {
+    letter-spacing: normal;
+  }
+
+  :where(
+    [class*="uppercase"],
+    [class*="label"],
+    [class*="badge"],
+    [class*="pill"],
+    [class*="tag"],
+    [class*="chip"],
+    [class*="eyebrow"]
+  ) {
+    letter-spacing: var(--tracking-label);
+    word-spacing: 0.08em;
+  }
 }
 
-.text-copy-rhythm {
-  letter-spacing: var(--tracking-copy);
-  word-spacing: var(--word-spacing-copy);
-  line-height: 1.8;
-}
+@layer components {
+  .text-display-tight {
+    letter-spacing: var(--tracking-display);
+  }
 
-.text-label-rhythm {
-  letter-spacing: var(--tracking-label);
-  word-spacing: 0.08em;
-}
+  .text-copy-rhythm {
+    letter-spacing: var(--tracking-copy);
+    word-spacing: var(--word-spacing-copy);
+    line-height: 1.8;
+  }
 
-.text-reading-rhythm {
-  letter-spacing: -0.008em;
-  word-spacing: 0.04em;
-  line-height: 1.9;
+  .text-label-rhythm {
+    letter-spacing: var(--tracking-label);
+    word-spacing: 0.08em;
+  }
+
+  .text-reading-rhythm {
+    letter-spacing: -0.008em;
+    word-spacing: 0.04em;
+    line-height: 1.9;
+  }
 }
 
 .surface-panel {

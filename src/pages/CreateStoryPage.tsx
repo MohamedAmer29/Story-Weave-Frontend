@@ -7,25 +7,42 @@ import { FileUp, MapPin, Sparkles } from "lucide-react";
 import { storiesApi } from "../api/storiesApi";
 import { Card, CardBody, CardHeader } from "../components/ui/Card";
 import { Input, Select, Textarea } from "../components/ui/field";
+import { CatalogSelect } from "../components/ui/CatalogSelect";
 import { CivilizationSelect } from "../components/ui/CivilizationSelect";
 import { Button } from "../components/ui/Button";
 import { getErrorMessage } from "../api/axios";
 import { useLanguage } from "../i18n";
 import { cn } from "../lib/cn";
 import { isCustomCivilization } from "../constants/civilizations";
-import type { StoryCivilization, StoryEra, StoryTheme, StoryType } from "../api/types";
+import {
+  useStoryCivilizations,
+  useStoryEras,
+  useStoryGenres,
+  useCatalogs,
+} from "../hooks/useStoryOptions";
+import {
+  humanize,
+  isCatalogId,
+  resolveCatalogEntry,
+} from "../lib/storyCatalog";
+import type {
+  StoryCivilization,
+  StoryEra,
+  StoryTheme,
+  StoryType,
+} from "../api/types";
 
 interface CreateForm {
   title: string;
   description?: string;
-  storyType: StoryType;
+  genreId: string;
   text: string;
   language: string;
   visualStyle?: string;
-  era: StoryEra;
+  eraId: string;
   year?: number;
   location?: string;
-  civilization: StoryCivilization;
+  civilization: string;
   customCivilization?: string;
   theme: StoryTheme;
   customTheme?: string;
@@ -34,7 +51,7 @@ interface CreateForm {
 
 const languages: string[] = ["ARABIC", "ENGLISH"];
 
-const storyTypes: StoryType[] = [
+const legacyStoryTypes: StoryType[] = [
   "FANTASY",
   "ADVENTURE",
   "SCI_FI",
@@ -50,16 +67,7 @@ const storyTypes: StoryType[] = [
   "THRILLER",
 ];
 
-const eras: StoryEra[] = ["BCE", "CE", "MODERN", "UNSPECIFIED"];
-const themes: StoryTheme[] = ["UNSPECIFIED", "FANTASY", "HISTORICAL", "ADVENTURE", "ROMANCE", "MYSTERY", "WAR", "HORROR", "COMEDY", "DRAMA", "MYTHOLOGY", "RELIGIOUS", "CUSTOM"];
-
-function humanize(value: string): string {
-  return value
-    .toLowerCase()
-    .split("_")
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(" ");
-}
+const legacyEras: StoryEra[] = ["BCE", "CE", "MODERN", "UNSPECIFIED"];
 
 export function CreateStoryPage() {
   const { t } = useLanguage();
@@ -69,9 +77,9 @@ export function CreateStoryPage() {
 
   const form = useForm<CreateForm>({
     defaultValues: {
-      storyType: "FANTASY",
+      genreId: "FANTASY",
       language: "",
-      era: "UNSPECIFIED",
+      eraId: "UNSPECIFIED",
       civilization: "UNSPECIFIED",
       theme: "UNSPECIFIED",
       visibility: "PRIVATE",
@@ -79,10 +87,42 @@ export function CreateStoryPage() {
   });
 
   const { register, handleSubmit, watch, setValue, formState: { errors } } = form;
-  const storyType = watch("storyType");
-  const era = watch("era");
+  const genreId = watch("genreId");
+  const eraId = watch("eraId");
   const civilization = watch("civilization");
   const theme = watch("theme");
+
+  const genresQuery = useStoryGenres();
+  const erasQuery = useStoryEras();
+  const civQuery = useStoryCivilizations();
+  const catalogs = useCatalogs(
+    {
+      genres: genresQuery,
+      eras: erasQuery,
+      civilizations: civQuery,
+    },
+    {
+      genres: legacyStoryTypes,
+      eras: legacyEras,
+    },
+  );
+
+  const legacyGenreOptions = legacyStoryTypes.map((s) => ({
+    value: s,
+    label: humanize(s),
+    legacyValue: s,
+  }));
+  const legacyEraOptions = legacyEras.map((e) => ({
+    value: e,
+    label: e === "UNSPECIFIED" ? "—" : humanize(e),
+    legacyValue: e,
+  }));
+
+  const resolveGenre = (value: string) =>
+    resolveCatalogEntry(value, catalogs.genres, legacyGenreOptions);
+
+  const resolveEra = (value: string) =>
+    resolveCatalogEntry(value, catalogs.eras, legacyEraOptions);
 
   const uploadInput = useRef<HTMLInputElement>(null);
 
@@ -91,23 +131,36 @@ export function CreateStoryPage() {
       toast.error(t.validation.textRequired);
       return;
     }
+    const genre = resolveGenre(values.genreId);
+    const era = resolveEra(values.eraId);
+    const civilizationOption = catalogs.civilizations.find(
+      (c) => c.value === values.civilization || c.legacyValue === values.civilization,
+    );
     const story = await storiesApi.create({
       title: values.title,
       description: values.description || undefined,
-      storyType: values.storyType,
+      storyType: genre ? (genre.legacyValue as StoryType) : undefined,
       text: values.text,
       sourceType: "TEXT",
       visibility: values.visibility,
       language: values.language || undefined,
       visualStyle: values.visualStyle || undefined,
-      era: values.era === "UNSPECIFIED" ? undefined : values.era,
+      genreId: genre && isCatalogId(genre.id) ? genre.id : undefined,
+      eraId: era && isCatalogId(era.id) ? era.id : undefined,
+      era: era ? (era.legacyValue as StoryEra) : undefined,
       year: values.year || undefined,
       location: values.location || undefined,
-      civilization: values.civilization === "UNSPECIFIED" ? undefined : values.civilization,
+      civilization:
+        values.civilization === "UNSPECIFIED" || isCatalogId(values.civilization)
+          ? undefined
+          : (values.civilization as StoryCivilization),
       customCivilization:
         isCustomCivilization(values.civilization) ? values.customCivilization : undefined,
       theme: values.theme === "UNSPECIFIED" ? undefined : values.theme,
       customTheme: values.theme === "CUSTOM" ? values.customTheme : undefined,
+      civilizationId: isCatalogId(civilizationOption?.value)
+        ? civilizationOption?.value
+        : undefined,
     });
     toast.success(t.create.created);
     navigate(`/stories/${story.id}`);
@@ -118,18 +171,31 @@ export function CreateStoryPage() {
       toast.error(t.validation.textRequired);
       return;
     }
+    const genre = resolveGenre(values.genreId);
+    const era = resolveEra(values.eraId);
+    const civilizationOption = catalogs.civilizations.find(
+      (c) => c.value === values.civilization || c.legacyValue === values.civilization,
+    );
     const story = await storiesApi.uploadPdf(pdfFile, {
-      storyType: values.storyType,
+      storyType: genre ? (genre.legacyValue as StoryType) : undefined,
       visualStyle: values.visualStyle || undefined,
       language: values.language || undefined,
-      era: values.era === "UNSPECIFIED" ? undefined : values.era,
+      genreId: genre && isCatalogId(genre.id) ? genre.id : undefined,
+      eraId: era && isCatalogId(era.id) ? era.id : undefined,
+      era: era ? (era.legacyValue as StoryEra) : undefined,
       year: values.year || undefined,
       location: values.location || undefined,
-      civilization: values.civilization === "UNSPECIFIED" ? undefined : values.civilization,
+      civilization:
+        values.civilization === "UNSPECIFIED" || isCatalogId(values.civilization)
+          ? undefined
+          : (values.civilization as StoryCivilization),
       customCivilization:
         isCustomCivilization(values.civilization) ? values.customCivilization : undefined,
       theme: values.theme === "UNSPECIFIED" ? undefined : values.theme,
       customTheme: values.theme === "CUSTOM" ? values.customTheme : undefined,
+      civilizationId: isCatalogId(civilizationOption?.value)
+        ? civilizationOption?.value
+        : undefined,
     });
     toast.success(t.create.created);
     navigate(`/stories/${story.id}`);
@@ -153,24 +219,32 @@ export function CreateStoryPage() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Input label={t.create.year} type="number" min={1} max={10000} placeholder={t.create.yearPh} {...register("year")} />
           <Input label={t.create.location} placeholder={t.create.locationPh} {...register("location")} />
-          <Select label={t.create.era} value={era} onChange={(e) => setValue("era", e.target.value as StoryEra)}>
-            {eras.map((e) => (
-              <option key={e} value={e}>
-                {e === "UNSPECIFIED" ? "—" : humanize(e)}
-              </option>
-            ))}
-          </Select>
+          <CatalogSelect
+            label={t.create.era}
+            value={eraId}
+            onChange={(v) => setValue("eraId", v)}
+            options={catalogs.eras.map((o) => ({
+              value: o.value,
+              label: o.legacyValue === "UNSPECIFIED" ? "—" : o.label,
+            }))}
+            legacyOptions={legacyEraOptions.map((o) => ({
+              value: o.value,
+              label: o.label,
+            }))}
+            loading={erasQuery.isLoading && !catalogs.erasFallback}
+          />
           <CivilizationSelect
             label={t.create.civilization}
             value={civilization}
             onChange={(v) => setValue("civilization", v)}
             searchPlaceholder={t.create.civilizationSearch}
+            options={catalogs.civilizations}
           />
           {isCustomCivilization(civilization) && (
             <Input label={t.create.customCivilization} placeholder={t.create.customCivilization} {...register("customCivilization")} />
           )}
           <Select label={t.create.theme} value={theme} onChange={(e) => setValue("theme", e.target.value as StoryTheme)}>
-            {themes.map((th) => (
+            {(["UNSPECIFIED", "FANTASY", "HISTORICAL", "ADVENTURE", "ROMANCE", "MYSTERY", "WAR", "HORROR", "COMEDY", "DRAMA", "MYTHOLOGY", "RELIGIOUS", "CUSTOM"] as StoryTheme[]).map((th) => (
               <option key={th} value={th}>
                 {th === "UNSPECIFIED" ? "—" : humanize(th)}
               </option>
@@ -182,7 +256,7 @@ export function CreateStoryPage() {
         </div>
       </div>
     ),
-    [era, civilization, theme, setValue, register, t]
+    [eraId, civilization, theme, setValue, register, t, catalogs, erasQuery.isLoading]
   );
 
   return (
@@ -233,17 +307,20 @@ export function CreateStoryPage() {
                     error={errors.title?.message}
                     {...register("title", { required: t.validation.titleRequired, maxLength: { value: 200, message: t.validation.maxLength.replace("{count}", "200") } })}
                   />
-                  <Select
+                  <CatalogSelect
                     label={t.create.storyType}
-                    value={storyType}
-                    onChange={(e) => setValue("storyType", e.target.value as StoryType)}
-                  >
-                    {storyTypes.map((s) => (
-                      <option key={s} value={s}>
-                        {humanize(s)}
-                      </option>
-                    ))}
-                  </Select>
+                    value={genreId}
+                    onChange={(v) => setValue("genreId", v)}
+                    options={catalogs.genres.map((o) => ({
+                      value: o.value,
+                      label: o.label,
+                    }))}
+                    legacyOptions={legacyGenreOptions.map((o) => ({
+                      value: o.value,
+                      label: o.label,
+                    }))}
+                    loading={genresQuery.isLoading && !catalogs.genresFallback}
+                  />
                 </div>
                 <Input
                   label={t.create.description}

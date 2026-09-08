@@ -7,6 +7,8 @@ import type {
   StoryDetails,
   StoryLibraryItem,
   StoryResponse,
+  StoryType,
+  SourceType,
   StoryVisibility,
   UpdateStoryInput,
   VisualContextOverrides,
@@ -23,16 +25,27 @@ export interface PublicStoryQuery {
   limit?: number;
   search?: string;
   sort?: "latest" | "oldest" | "updated";
+  storyType?: StoryType;
+  sourceType?: SourceType;
 }
 
 export interface StoryQuery extends PublicStoryQuery {
   status?: string;
-  sourceType?: string;
   visibility?: string;
 }
 
 export interface StoryTypesResponse {
   types: string[];
+}
+
+export interface AppendStoryResponse {
+  success: boolean;
+  message: string;
+  storyId: string;
+  pagesCreated: number;
+  pagesUpdated: number;
+  pagesRegenerationRequired: number;
+  generationQueued: boolean;
 }
 
 export const storiesApi = {
@@ -41,7 +54,12 @@ export const storiesApi = {
       .get<PaginatedStories>("/stories", { params: query })
       .then((r) => r.data),
 
-  searchPublic: (query: { q: string; page?: number; limit?: number }) =>
+  searchPublic: (query: {
+    q: string;
+    page?: number;
+    limit?: number;
+    sort?: "latest" | "oldest" | "updated";
+  }) =>
     api
       .get<PaginatedStories>("/stories/public/search", { params: query })
       .then((r) => r.data),
@@ -58,6 +76,25 @@ export const storiesApi = {
 
   get: (id: string) =>
     api.get<StoryDetails>(`/stories/${id}`).then((r) => r.data),
+
+  getPages: (id: string) =>
+    api.get<StoryPageResponse[]>(`/stories/${id}/pages`).then((r) => r.data),
+  append: (id: string, input: { content?: string; file?: File }) => {
+    const form = new FormData();
+    if (input.content) form.append("content", input.content);
+    if (input.file) form.append("file", input.file);
+    return api
+      .post<AppendStoryResponse>(`/stories/${id}/append`, form, {
+        headers: { "Content-Type": "multipart/form-data" },
+      })
+      .then((r) => r.data);
+  },
+  updatePage: (storyId: string, pageId: string, content: string) =>
+    api.patch<StoryPageResponse[]>(`/stories/${storyId}/pages/${pageId}`, { content }).then((r) => r.data),
+  deletePage: (storyId: string, pageId: string) =>
+    api.delete(`/stories/${storyId}/pages/${pageId}`),
+  reorderPages: (storyId: string, pageIds: string[]) =>
+    api.patch<StoryPageResponse[]>(`/stories/${storyId}/pages/reorder`, { pageIds }).then((r) => r.data),
 
   myStories: (query: StoryQuery = {}) =>
     api
@@ -121,6 +158,17 @@ export const storiesApi = {
   },
 };
 
+export interface StoryPageResponse {
+  id: string;
+  pageNumber: number;
+  content: string;
+  imageUrl: string | null;
+  imageStatus: string | null;
+  generationError: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export const illustrationApi = {
   generate: (storyId: string, regenerate = false) =>
     api
@@ -131,6 +179,21 @@ export const illustrationApi = {
         totalPages: number;
         queuedPages: number;
       }>(`/stories/${storyId}/generate-illustrations`, { regenerate })
+      .then((r) => r.data),
+
+  illustrateRemaining: (storyId: string) =>
+    api
+      .post<{
+        success: boolean;
+        message: string;
+        storyId: string;
+        totalPages: number;
+        alreadyIllustrated: number;
+        pagesQueued: number;
+        pagesDeferred?: number;
+        generationStarted: boolean;
+        reason?: string;
+      }>(`/stories/${storyId}/illustrate-remaining`)
       .then((r) => r.data),
 
   regeneratePage: (

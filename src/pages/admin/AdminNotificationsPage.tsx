@@ -10,6 +10,7 @@ import { useNotifications } from "../../hooks/useNotifications";
 import { Button } from "../../components/ui/Button";
 import { Badge } from "../../components/ui/Badge";
 import { EmptyState, ErrorState } from "../../components/ui/States";
+import { ConfirmDialog } from "../../components/ui/ConfirmDialog";
 import { PageLoader } from "../../components/ui/Skeleton";
 import { useContentLoading } from "../../layouts/PageLoading";
 import { Pagination } from "../../components/ui/Pagination";
@@ -22,6 +23,7 @@ export function AdminNotificationsPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
+  const [deleteTarget, setDeleteTarget] = useState<NotificationItem | null>(null);
 
   const { data, isLoading, isError, refetch, invalidate } = useNotifications({ page, limit: 10 });
 
@@ -49,6 +51,7 @@ export function AdminNotificationsPage() {
     mutationFn: (id: string) => notificationsApi.remove(id),
     onSuccess: () => {
       toast.success(t.notifications.deleted);
+      setDeleteTarget(null);
       invalidateAll();
     },
     onError: (err) => toast.error(getErrorMessage(err) ?? t.common.error),
@@ -163,7 +166,7 @@ export function AdminNotificationsPage() {
                         className="text-fg-muted hover:text-red-600"
                         onClick={(e) => {
                           e.stopPropagation();
-                          deleteMutation.mutate(notif.id);
+                          setDeleteTarget(notif);
                         }}
                       >
                         <Trash2 className="size-4" />
@@ -180,6 +183,15 @@ export function AdminNotificationsPage() {
           <Pagination className="mt-8" page={page} totalPages={data.meta.totalPages} onPageChange={setPage} />
         )}
       </section>
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        title={t.notifications.delete}
+        message={t.notifications.confirmDeleteMessage}
+        loading={deleteMutation.isPending}
+        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </>
   );
 }

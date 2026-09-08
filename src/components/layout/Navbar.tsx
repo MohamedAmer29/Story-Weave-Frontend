@@ -40,12 +40,13 @@ function userLinks(t: ReturnType<typeof useLanguage>["t"]): NavLinkDef[] {
     { to: "/dashboard", key: t.nav.dashboard },
     { to: "/library", key: t.nav.myStories },
     { to: "/create", key: t.nav.createStory },
+    // { to: "/story-options", key: t.nav.storyOptions },
   ];
 }
 
 export function Navbar() {
   const { t } = useLanguage();
-  const { isAuthenticated, user, logout, loggedIn } = useAuth();
+  const { isAuthenticated, user, logout, loggedIn, status } = useAuth();
   const isAdmin = useIsAdmin();
   const navigate = useNavigate();
   const location = useLocation();
@@ -54,12 +55,15 @@ export function Navbar() {
   const { data: unreadCount } = useUnreadCount();
 
   const isLandingPage = location.pathname === "/";
+  const authLoading = status === "idle" || status === "loading";
   const guestNavLinks = guestLinks(t);
-  const links = loggedIn
-    ? userLinks(t)
-    : isLandingPage
-      ? guestNavLinks
-      : guestNavLinks.filter((link) => link.to !== "/#features");
+  const links = authLoading
+    ? []
+    : loggedIn
+      ? userLinks(t)
+      : isLandingPage
+        ? guestNavLinks
+        : guestNavLinks.filter((link) => link.to !== "/#features");
   const isHomeActive = isLandingPage && !location.hash;
   const isFeaturesActive = isLandingPage && location.hash === "#features";
   const isExploreActive = location.pathname === "/explore";
@@ -151,41 +155,13 @@ export function Navbar() {
                 </NavLink>
               );
             })}
-            {/* {isAdmin && (
-              <NavLink
-                to="/admin"
-                className={({ isActive }) =>
-                  cn(
-                    "rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                    isActive
-                      ? "text-brand-600 dark:text-brand-400 bg-brand-500/10"
-                      : "text-fg-muted hover:bg-surface-3 hover:text-fg",
-                  )
-                }
-              >
-                {t.nav.admin}
-              </NavLink>
-            )} */}
           </nav>
         </div>
-
-        {/* <div className="hidden flex-1 items-center justify-start px-4 lg:flex">
-          {showAdminGlobalControls && (
-            <label className="flex w-full max-w-xl items-center gap-3 rounded-[22px] border border-border bg-surface px-4 py-3 text-fg-muted shadow-sm">
-              <Search className="size-4" aria-hidden />
-              <input
-                aria-label="Platform overview search"
-                className="w-full border-0 bg-transparent text-sm text-fg placeholder:text-fg-muted focus:outline-none"
-                placeholder="Platform Overview"
-              />
-            </label>
-          )}
-        </div> */}
 
         <div className="hidden shrink-0 items-center justify-end gap-2 lg:flex">
           <LanguageSwitcher />
           <ThemeToggle compact />
-          {!loggedIn && (
+          {!authLoading && !loggedIn && (
             <>
               <Button variant="ghost" onClick={() => go("/login")}>
                 {t.nav.login}
@@ -193,23 +169,21 @@ export function Navbar() {
               <Button onClick={() => go("/register")}>{t.nav.register}</Button>
             </>
           )}
-          {isAuthenticated && (
+          {!authLoading && isAuthenticated && (
             <>
-              {showAdminGlobalControls && (
-                <button
-                  type="button"
-                  onClick={() => go("/notifications")}
-                  aria-label={t.nav.notifications}
-                  className="relative inline-flex size-11 items-center justify-center rounded-xl border border-border bg-surface text-fg transition-colors hover:border-brand-500/40"
-                >
-                  <Bell className="size-4" aria-hidden />
-                  {unreadCount && unreadCount > 0 ? (
-                    <span className="absolute -right-1 -top-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-brand-600 px-1 text-[10px] font-semibold text-white">
-                      {unreadCount > 9 ? "9+" : unreadCount}
-                    </span>
-                  ) : null}
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => go("/notifications")}
+                aria-label={t.nav.notifications}
+                className="relative inline-flex size-11 items-center justify-center rounded-xl border border-border bg-surface text-fg transition-colors hover:border-brand-500/40"
+              >
+                <Bell className="size-4" aria-hidden />
+                {unreadCount && unreadCount > 0 ? (
+                  <span className="absolute -right-1 -top-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-brand-600 px-1 text-[10px] font-semibold text-white">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                ) : null}
+              </button>
               <Dropdown
                 ariaLabel={t.nav.profile}
                 trigger={
@@ -238,6 +212,7 @@ export function Navbar() {
                         src={user?.avatarUrl ?? undefined}
                         name={`${user?.firstName ?? ""} ${user?.lastName ?? ""}`}
                         size="lg"
+                        className="shrink-0"
                       />
                       <div className="min-w-0">
                         <p className="truncate text-sm font-semibold text-fg">
@@ -275,7 +250,7 @@ export function Navbar() {
 
         {/* Mobile controls */}
         <div className="flex items-center gap-2 lg:hidden">
-          {loggedIn ? (
+          {!authLoading && isAuthenticated ? (
             <NavLink
               to="/notifications"
               className="relative rounded-lg p-2 text-fg-muted hover:text-fg"
@@ -307,7 +282,7 @@ export function Navbar() {
       </div>
 
       {/* Mobile panel */}
-      {!loggedIn && mobileOpen && (
+      {!authLoading && mobileOpen && !loggedIn && (
         <div className="sf-slide-down border-t border-border bg-surface lg:hidden">
           <nav
             className="mx-auto max-w-7xl space-y-1 px-4 py-4"

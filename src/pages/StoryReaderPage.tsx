@@ -10,6 +10,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Globe,
+  ListPlus,
   Loader2,
   Lock,
   Pencil,
@@ -21,9 +22,10 @@ import {
 } from "lucide-react";
 import { storiesApi, illustrationApi } from "../api/storiesApi";
 import { Button } from "../components/ui/Button";
-import { Input } from "../components/ui/field";
+import { Input, Textarea } from "../components/ui/field";
 import { Badge } from "../components/ui/Badge";
 import { Modal } from "../components/ui/Modal";
+import { ConfirmDialog } from "../components/ui/ConfirmDialog";
 import { VisualContextOverrideForm } from "../components/story/VisualContextOverrideForm";
 import { PageLoader } from "../components/ui/Skeleton";
 import { useContentLoading } from "../layouts/PageLoading";
@@ -32,6 +34,7 @@ import { getErrorMessage } from "../api/axios";
 import { useAuth } from "../hooks/useAuth";
 import { useLanguage } from "../i18n";
 import { getCivilizationLabel } from "../constants/civilizations";
+import { useStoryCivilizations } from "../hooks/useStoryOptions";
 import { useAppDispatch, useAppSelector } from "../store";
 import { setPage as savePage } from "../store/readerSlice";
 import { cn } from "../lib/cn";
@@ -199,6 +202,9 @@ export function StoryReaderPage() {
   const queryClient = useQueryClient();
   const dispatch = useAppDispatch();
   const [shareOpen, setShareOpen] = useState(false);
+  const [appendOpen, setAppendOpen] = useState(false);
+  const [appendText, setAppendText] = useState("");
+  const [appendFile, setAppendFile] = useState<File | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
   const [regenerationTarget, setRegenerationTarget] = useState<
@@ -217,6 +223,8 @@ export function StoryReaderPage() {
     queryFn: () => storiesApi.get(storyId),
     enabled: Boolean(storyId),
   });
+
+  const { data: civilizationOptions } = useStoryCivilizations();
 
   const isOwner = Boolean(user && storyId && user.id === query.data?.author.id);
 
@@ -240,6 +248,22 @@ export function StoryReaderPage() {
     mutationFn: () => illustrationApi.generate(storyId),
     onSuccess: async () => {
       toast.success(t.create.generationStarted);
+      await queryClient.invalidateQueries({
+        queryKey: ["story", storyId, "illustration-status"],
+      });
+      await queryClient.invalidateQueries({ queryKey: ["story", storyId] });
+    },
+    onError: (err) => toast.error(getErrorMessage(err) ?? t.common.error),
+  });
+
+  const illustrateRemainingMutation = useMutation({
+    mutationFn: () => illustrationApi.illustrateRemaining(storyId),
+    onSuccess: async (data) => {
+      toast.success(
+        data.pagesQueued > 0
+          ? t.reader.illustrateRemainingStarted
+          : t.reader.allPagesIllustrated,
+      );
       await queryClient.invalidateQueries({
         queryKey: ["story", storyId, "illustration-status"],
       });
@@ -290,10 +314,34 @@ export function StoryReaderPage() {
     onError: (err) => toast.error(getErrorMessage(err) ?? t.common.error),
   });
 
+  const appendMutation = useMutation({
+    mutationFn: () =>
+      storiesApi.append(storyId, {
+        content: appendText.trim() || undefined,
+        file: appendFile ?? undefined,
+      }),
+    onSuccess: async () => {
+      toast.success("Story continuation added");
+      setAppendText("");
+      setAppendFile(null);
+      setAppendOpen(false);
+      await queryClient.invalidateQueries({ queryKey: ["story", storyId] });
+      await queryClient.invalidateQueries({
+        queryKey: ["story", storyId, "illustration-status"],
+      });
+    },
+    onError: (err) => toast.error(getErrorMessage(err) ?? t.common.error),
+  });
+
   const isGenerating =
     statusQuery.data?.status === "GENERATING" ||
     statusQuery.data?.status === "QUEUED";
   const illustrationCompleted = statusQuery.data?.status === "COMPLETED";
+  const canIllustrateRemaining =
+    !isGenerating &&
+    !illustrationCompleted &&
+    Boolean(statusQuery.data) &&
+    (statusQuery.data?.failed ?? 0) > 0;
   const generationProgress = Math.min(
     100,
     Math.max(0, statusQuery.data?.progress ?? 0),
@@ -321,19 +369,20 @@ export function StoryReaderPage() {
   const preloadedSrcs = useRef<Set<string>>(new Set());
 
   useEffect(() => {
-    const updatedAt = query.data?.updatedAt;
-    if (!updatedAt) return;
+    if (!pages.length) return;
     [safePage - 1, safePage, safePage + 1].forEach((index) => {
-      const url = sections[index - 1]?.imageUrl;
+      const p = pages.find((item) => item.pageNumber === index);
+      const url = p?.imageUrl;
       if (!url) return;
-      const src = withImageCacheBust(url, updatedAt);
+      const stamp = p.imageGeneratedAt || p.updatedAt || url;
+      const src = withImageCacheBust(url, stamp);
       if (!src) return;
       if (preloadedSrcs.current.has(src)) return;
       preloadedSrcs.current.add(src);
       const img = new Image();
       img.src = src;
     });
-  }, [safePage, sections, query.data?.updatedAt]);
+  }, [safePage, pages]);
 
   useGSAP(
     () => {
@@ -348,7 +397,7 @@ export function StoryReaderPage() {
     },
     {
       scope: rootRef,
-      dependencies: [storyId, safePage, query.data?.updatedAt],
+      dependencies: [storyId, safePage],
     },
   );
 
@@ -376,10 +425,17 @@ export function StoryReaderPage() {
 
   const story = query.data;
   const storyCoverSrc = story.cover.imageUrl
-    ? withImageCacheBust(story.cover.imageUrl, story.updatedAt)
+    ? withImageCacheBust(
+        story.cover.imageUrl,
+        story.coverImageGeneratedAt || story.updatedAt,
+      )
     : null;
-  const currentImageSrc = current.imageUrl
-    ? withImageCacheBust(current.imageUrl, story.updatedAt)
+  const pageImageStamp =
+    currentPageEntity?.imageGeneratedAt ||
+    currentPageEntity?.updatedAt ||
+    current?.imageUrl;
+  const currentImageSrc = current?.imageUrl
+    ? withImageCacheBust(current.imageUrl, pageImageStamp)
     : null;
   const statusLabel = (s: IllustrationPageStatus | null) => {
     if (s === "COMPLETED") return t.reader.illustrationStatus.COMPLETED;
@@ -396,61 +452,72 @@ export function StoryReaderPage() {
   };
 
   return (
-    <>
+    <div ref={rootRef as any} className="min-h-screen bg-surface-2 text-fg">
       <Helmet>
-        <title>
-          {story.title} · {t.brand.name}
-        </title>
-        <meta name="description" content={story.description ?? undefined} />
+        <title>{story ? `${story.title} | Story` : "Story"}</title>
       </Helmet>
 
-      <section ref={rootRef} className="hero-aurora relative">
-        <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
-          <Link
-            data-page-reveal
-            to="/library"
-            className="inline-flex items-center gap-2 text-sm font-medium text-fg-muted transition-colors hover:text-fg"
-          >
-            <ArrowLeft className="size-4 rtl:rotate-180" aria-hidden />
-            {t.reader.backToLibrary}
-          </Link>
-
-          <div className="mt-6 flex flex-col gap-8 lg:flex-row">
-            <div
-              data-page-reveal
-              className="mx-auto w-full max-w-xs shrink-0 lg:mx-0"
+      {/* Dynamic Header */}
+      <header className="sticky top-0 z-20 border-b border-border/80 bg-surface/80 backdrop-blur-md">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate(-1)}
+              className="gap-1.5 text-fg-muted hover:text-fg"
             >
-              <div className="relative aspect-[3/4] overflow-hidden rounded-2xl border border-border bg-surface shadow-xl">
+              <ArrowLeft className="size-4" aria-hidden />
+              <span className="hidden sm:inline">{t.common.back}</span>
+            </Button>
+            <div className="h-4 w-px bg-border" />
+            <h2 className="line-clamp-1 max-w-xs font-display text-sm font-semibold text-fg sm:max-w-md">
+              {story.title}
+            </h2>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShareOpen(true)}
+              className="gap-1.5 text-fg-muted hover:text-fg"
+            >
+              <Share2 className="size-4" aria-hidden />
+              <span className="hidden sm:inline">{t.reader.share}</span>
+            </Button>
+            {isOwner && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setAppendOpen(true)}
+                className="gap-1.5"
+              >
+                <ListPlus className="size-4" aria-hidden />
+                <span className="hidden sm:inline">Append text</span>
+              </Button>
+            )}
+          </div>
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="rounded-3xl border border-border/60 bg-surface/40 p-6 backdrop-blur-sm sm:p-8">
+          {/* Top metadata grid */}
+          <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:gap-10">
+            <div data-page-reveal className="w-full shrink-0 lg:w-72">
+              <div className="story-book-figure group relative aspect-[3/4] overflow-hidden rounded-2xl border border-border bg-surface-2 shadow-xl">
                 {storyCoverSrc ? (
                   <div className="relative size-full">
                     <img
                       src={storyCoverSrc}
                       alt={story.title}
-                      loading="lazy"
-                      srcSet={buildResponsiveSrcSet(storyCoverSrc) ?? undefined}
-                      className="size-full object-cover"
+                      className="size-full object-cover transition-transform duration-300 group-hover:scale-105"
                     />
-                    {(story.cover.imageStatus === "PENDING" ||
-                      story.cover.imageStatus === "QUEUED" ||
-                      story.cover.imageStatus === "GENERATING" ||
-                      story.cover.imageStatus === "UPLOADING" ||
-                      regenerateCoverMutation.isPending) && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-overlay/70">
-                        <div className="flex items-center gap-2 rounded-full border border-white/20 bg-black/45 px-3 py-2 text-sm font-medium text-white backdrop-blur-sm">
-                          <Loader2
-                            className="size-4 animate-spin"
-                            aria-hidden
-                          />
-                          {t.create.generating}
-                        </div>
-                      </div>
-                    )}
                     {isOwner && (
-                      <div className="absolute inset-x-3 top-3 flex justify-end">
+                      <div className="absolute bottom-3 right-3 opacity-0 transition-opacity group-hover:opacity-100">
                         <Button
+                          variant="secondary"
                           size="sm"
-                          variant="ghost"
-                          className="bg-surface/85 text-xs shadow-lg backdrop-blur"
                           onClick={() => setRegenerationTarget("cover")}
                           loading={regenerateCoverMutation.isPending}
                           disabled={
@@ -569,7 +636,11 @@ export function StoryReaderPage() {
                     <p className="font-medium text-fg">{story.location}</p>
                   </div>
                 )}
-                {story.civilization && (
+                {Boolean(
+                  story.civilization ||
+                    story.civilizationId ||
+                    story.customCivilization,
+                ) && (
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wide text-fg-faint">
                       {t.create.civilization}
@@ -577,7 +648,13 @@ export function StoryReaderPage() {
                     <p className="font-medium text-fg">
                       {story.civilization === "UNSPECIFIED"
                         ? "—"
-                        : getCivilizationLabel(story.civilization)}
+                        : story.customCivilization ||
+                          getCivilizationLabel(story.civilization) ||
+                          civilizationOptions?.find(
+                            (c) => c.id === story.civilizationId,
+                          )?.name ||
+                          story.civilization ||
+                          "—"}
                     </p>
                   </div>
                 )}
@@ -614,6 +691,14 @@ export function StoryReaderPage() {
                   <Button
                     variant="outline"
                     size="sm"
+                    onClick={() => setAppendOpen(true)}
+                  >
+                    <ListPlus className="size-4" aria-hidden />
+                    Append text
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => setShareOpen(true)}
                   >
                     <Share2 className="size-4" aria-hidden />
@@ -640,6 +725,19 @@ export function StoryReaderPage() {
                         ? t.reader.illustrationStatus.COMPLETED
                         : t.create.generateNow}
                   </Button>
+                  {canIllustrateRemaining && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => illustrateRemainingMutation.mutate()}
+                      loading={illustrateRemainingMutation.isPending}
+                      disabled={isGenerating}
+                      className="border-amber-500/40 text-amber-600 hover:bg-amber-500/10 dark:text-amber-400"
+                    >
+                      <ListPlus className="size-4" aria-hidden />
+                      {t.reader.illustrateRemaining}
+                    </Button>
+                  )}
                   <Button
                     variant="ghost"
                     size="sm"
@@ -653,7 +751,7 @@ export function StoryReaderPage() {
               )}
 
               {/* Generation progress */}
-              {(statusQuery.data?.totalPages > 0 ||
+              {((statusQuery.data?.totalPages ?? 0) > 0 ||
                 generateMutation.isPending) && (
                 <div className="mt-6 rounded-2xl border border-border bg-surface p-4">
                   <div className="flex items-center justify-between text-sm">
@@ -817,7 +915,7 @@ export function StoryReaderPage() {
             </div>
           )}
         </div>
-      </section>
+      </main>
 
       {expandedImage && (
         <div
@@ -849,6 +947,62 @@ export function StoryReaderPage() {
         open={shareOpen}
         onClose={() => setShareOpen(false)}
       />
+
+      <Modal
+        open={appendOpen}
+        onClose={() => setAppendOpen(false)}
+        title="Append new text"
+        description="Continue this story with text or a PDF. The server will split it into pages automatically."
+        size="lg"
+      >
+        <div className="space-y-4">
+          <Textarea
+            label="Continuation text"
+            rows={8}
+            maxLength={100000}
+            value={appendText}
+            onChange={(event) => setAppendText(event.target.value)}
+            disabled={Boolean(appendFile)}
+            placeholder="Write what happens next..."
+          />
+          <div className="space-y-2">
+            <input
+              type="file"
+              accept="application/pdf,.pdf"
+              onChange={(event) => {
+                const file = event.target.files?.[0] ?? null;
+                setAppendFile(file);
+                if (file) setAppendText("");
+              }}
+              className="block w-full text-sm text-fg-muted file:me-3 file:rounded-md file:border-0 file:bg-brand-500/10 file:px-3 file:py-2 file:text-sm file:font-medium file:text-brand-700 hover:file:bg-brand-500/15 dark:file:text-brand-300"
+              aria-label="Upload continuation PDF"
+            />
+            <p className="text-xs text-fg-muted">
+              Choose text or a PDF, not both.
+            </p>
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button
+              variant="outline"
+              type="button"
+              onClick={() => setAppendOpen(false)}
+            >
+              {t.common.cancel}
+            </Button>
+            <Button
+              type="button"
+              loading={appendMutation.isPending}
+              disabled={
+                (!appendText.trim() && !appendFile) ||
+                (Boolean(appendText.trim()) && Boolean(appendFile))
+              }
+              onClick={() => appendMutation.mutate()}
+            >
+              Append continuation
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       <Modal
         open={regenerationTarget !== null}
@@ -901,7 +1055,7 @@ export function StoryReaderPage() {
           </Button>
         </div>
       </Modal>
-    </>
+    </div>
   );
 }
 
@@ -918,6 +1072,7 @@ function ShareModal({
   const queryClient = useQueryClient();
   const [recipient, setRecipient] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [revokeTarget, setRevokeTarget] = useState<string | null>(null);
 
   const sharesQuery = useQuery({
     queryKey: ["story", storyId, "shares"],
@@ -941,6 +1096,7 @@ function ShareModal({
     mutationFn: (userId: string) => storiesApi.revokeShare(storyId, userId),
     onSuccess: () => {
       toast.success(t.share.revoked);
+      setRevokeTarget(null);
       void queryClient.invalidateQueries({
         queryKey: ["story", storyId, "shares"],
       });
@@ -949,12 +1105,13 @@ function ShareModal({
   });
 
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title={t.share.title}
-      description={t.share.subtitle}
-    >
+    <>
+      <Modal
+        open={open}
+        onClose={onClose}
+        title={t.share.title}
+        description={t.share.subtitle}
+      >
       <div className="space-y-4">
         <div className="flex gap-2">
           <Input
@@ -1009,7 +1166,7 @@ function ShareModal({
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => revokeMutation.mutate(share.userId)}
+                    onClick={() => setRevokeTarget(share.userId)}
                     className="text-fg-muted hover:text-red-600"
                   >
                     {t.share.revoke}
@@ -1020,6 +1177,16 @@ function ShareModal({
           )}
         </div>
       </div>
-    </Modal>
+      </Modal>
+
+      <ConfirmDialog
+        open={Boolean(revokeTarget)}
+        title={t.share.revoke}
+        message={t.share.confirmRevoke}
+        loading={revokeMutation.isPending}
+        onConfirm={() => revokeTarget && revokeMutation.mutate(revokeTarget)}
+        onCancel={() => setRevokeTarget(null)}
+      />
+    </>
   );
 }

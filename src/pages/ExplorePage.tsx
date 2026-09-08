@@ -24,7 +24,7 @@ export function ExplorePage() {
       if (search) {
         return storiesApi.searchPublic({ q: search, page, limit: 9, sort: storyType ? undefined : sort });
       }
-      return storiesApi.publicStories({ page, limit: 9, sort, sourceType: storyType || undefined });
+        return storiesApi.publicStories({ page, limit: 9, sort, storyType: storyType || undefined });
     },
   });
 

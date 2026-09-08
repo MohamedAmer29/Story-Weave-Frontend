@@ -8,6 +8,7 @@ import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Skeleton } from "../../components/ui/Skeleton";
 import { Modal } from "../../components/ui/Modal";
+import { ConfirmDialog } from "../../components/ui/ConfirmDialog";
 import { getErrorMessage } from "../../api/axios";
 import { useLanguage } from "../../i18n";
 
@@ -48,6 +49,7 @@ export function AdminSystemTab() {
   const { t } = useLanguage();
   const queryClient = useQueryClient();
   const [resetOpen, setResetOpen] = useState(false);
+  const [revokeOpen, setRevokeOpen] = useState(false);
 
   const health = useQuery({
     queryKey: ["admin", "health"],
@@ -77,6 +79,7 @@ export function AdminSystemTab() {
     mutationFn: () => adminApi.revokeOtherSessions(),
     onSuccess: () => {
       toast.success(t.admin.revokeOtherSessionsSuccess);
+      setRevokeOpen(false);
     },
     onError: (err) => toast.error(getErrorMessage(err) ?? t.common.error),
   });
@@ -128,7 +131,7 @@ export function AdminSystemTab() {
                 variant="outline"
                 size="sm"
                 className="w-full"
-                onClick={() => revokeOtherSessionsMutation.mutate()}
+                onClick={() => setRevokeOpen(true)}
                 loading={revokeOtherSessionsMutation.isPending}
               >
                 <LogOut className="size-4 mr-2" aria-hidden />
@@ -267,6 +270,15 @@ export function AdminSystemTab() {
           </Button>
         </div>
       </Modal>
+
+      <ConfirmDialog
+        open={revokeOpen}
+        title={t.admin.revokeOtherSessions}
+        message={t.admin.confirmRevokeSessions}
+        loading={revokeOtherSessionsMutation.isPending}
+        onConfirm={() => revokeOtherSessionsMutation.mutate()}
+        onCancel={() => setRevokeOpen(false)}
+      />
     </div>
   );
 }

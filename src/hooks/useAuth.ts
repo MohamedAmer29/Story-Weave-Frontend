@@ -17,6 +17,7 @@ import {
 } from "../store/authSlice";
 
 import { requestRefresh } from "../api/axios";
+import { queryClient } from "../lib/queryClient";
 
 export function useAuth() {
   const dispatch = useAppDispatch();
@@ -107,6 +108,7 @@ export function useAuth() {
       // ignore server errors on logout
     }
     dispatch(clearCredentials());
+    queryClient.clear();
   }, [dispatch]);
 
   return {

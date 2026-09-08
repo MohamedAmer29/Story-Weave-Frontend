@@ -5,9 +5,9 @@ import { useAuth } from "./useAuth";
 const UNREAD_KEY = ["notifications", "unread-count"] as const;
 
 export function useUnreadCount() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   return useQuery({
-    queryKey: [...UNREAD_KEY],
+    queryKey: [...UNREAD_KEY, user?.id],
     queryFn: notificationsApi.unreadCount,
     enabled: isAuthenticated,
     refetchInterval: 60_000,
@@ -15,11 +15,11 @@ export function useUnreadCount() {
 }
 
 export function useNotifications(params: { page?: number; limit?: number; unreadOnly?: boolean } = {}) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const queryClient = useQueryClient();
 
   const query = useQuery({
-    queryKey: ["notifications", params],
+    queryKey: ["notifications", params, user?.id],
     queryFn: () => notificationsApi.list(params),
     enabled: isAuthenticated,
   });

@@ -64,9 +64,7 @@ export function StoryCard({ story, authorName, authorId, footer }: StoryCardProp
   const coverField =
     anyStory.coverImageUrl ??
     (anyStory.cover as { imageUrl?: string } | undefined)?.imageUrl ??
-    anyStory.coverImage ??
-    anyStory.imageUrl ??
-    anyStory.thumbnail;
+    anyStory.coverImage;
   const cover = resolveImageUrl(coverField as string | undefined);
   const isItem = "illustratedPages" in story;
   const coverSrc = cover

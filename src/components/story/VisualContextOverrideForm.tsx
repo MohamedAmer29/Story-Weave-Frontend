@@ -123,7 +123,7 @@ export function VisualContextOverrideForm({ onSubmit, onCancel, loading }: Props
         <CivilizationSelect
           label={t.create.civilization}
           value={form.civilization || "UNSPECIFIED"}
-          onChange={(value) => update("civilization", value === "UNSPECIFIED" ? "" : value)}
+          onChange={(value) => update("civilization", value === "UNSPECIFIED" ? "" : value as FormState["civilization"])}
           searchPlaceholder={t.create.civilizationSearch}
         />
         <Select

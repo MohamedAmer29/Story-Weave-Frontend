@@ -13,6 +13,7 @@ import {
   PlusCircle,
   ShieldCheck,
   Sparkles,
+  Tags,
   User,
   X,
 } from "lucide-react";
@@ -52,6 +53,7 @@ function SidebarContent({ collapsed = false }: { collapsed?: boolean }) {
     { to: "/library", label: t.nav.myStories, icon: Library },
     { to: "/explore", label: t.nav.explore, icon: Compass },
     { to: "/create", label: t.nav.createStory, icon: PlusCircle },
+    { to: "/story-options", label: t.nav.storyOptions, icon: Tags },
     {
       to: "/notifications",
       label: t.nav.notifications,

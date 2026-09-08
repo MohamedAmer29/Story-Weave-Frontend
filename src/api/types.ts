@@ -18,9 +18,23 @@ export type StoryType =
   | "FAIRY_TALE"
   | "CHILDREN"
   | "ACTION"
-  | "THRILLER";
+  | "THRILLER"
+  | "LORD_OF_THE_RINGS"
+  | "MIDDLE_EARTH_FANTASY"
+  | "HOBBIT_FANTASY"
+  | "EPIC_FANTASY"
+  | "HIGH_FANTASY"
+  | "DARK_FANTASY";
 
-export type StoryEra = "BCE" | "CE" | "MODERN" | "UNSPECIFIED";
+export type StoryEra =
+  | "BCE"
+  | "CE"
+  | "MODERN"
+  | "FIRST_AGE"
+  | "SECOND_AGE"
+  | "THIRD_AGE"
+  | "FOURTH_AGE"
+  | "UNSPECIFIED";
 export type { StoryCivilization };
 export type StoryTheme =
   | "FANTASY"
@@ -122,6 +136,20 @@ export interface StoryResponse {
   customTheme?: string;
   visualStyle?: string;
   errorMessage?: string;
+  genreId?: string | null;
+  eraId?: string | null;
+  civilizationId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StoryOption {
+  id: string;
+  name: string;
+  description?: string | null;
+  isActive: boolean;
+  legacyValue?: string | null;
+  createdBy?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -152,6 +180,9 @@ export interface StoryPage {
   location: string | null;
   imageUrl: string | null;
   imageStatus: IllustrationPageStatus | null;
+  generationError?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface StorySection {
@@ -180,6 +211,9 @@ export interface StoryDetails {
   customTheme: string | null;
   visualStyle?: string | null;
   author: { id: string; name: string; avatarUrl: string | null };
+  genreId?: string | null;
+  eraId?: string | null;
+  civilizationId?: string | null;
   stats: {
     totalPages: number;
     illustratedPages: number;
@@ -272,7 +306,7 @@ export interface VisualContextOverrides {
 export interface CreateStoryInput {
   title: string;
   description?: string;
-  storyType: StoryType;
+  storyType?: StoryType;
   text: string;
   sourceType?: SourceType;
   visibility?: StoryVisibility;
@@ -285,6 +319,9 @@ export interface CreateStoryInput {
   customCivilization?: string;
   theme?: StoryTheme;
   customTheme?: string;
+  genreId?: string;
+  eraId?: string;
+  civilizationId?: string;
 }
 
 export interface UpdateStoryInput {
@@ -302,6 +339,9 @@ export interface UpdateStoryInput {
   customCivilization?: string;
   theme?: StoryTheme;
   customTheme?: string;
+  genreId?: string;
+  eraId?: string;
+  civilizationId?: string;
 }
 
 export interface ShareEntry {

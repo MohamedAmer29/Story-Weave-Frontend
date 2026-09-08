@@ -23,6 +23,7 @@ import { DashboardPage } from "../pages/DashboardPage";
 import { LibraryPage } from "../pages/LibraryPage";
 import { CreateStoryPage } from "../pages/CreateStoryPage";
 import { EditStoryPage } from "../pages/EditStoryPage";
+import { StoryOptionsPage } from "../pages/StoryOptionsPage";
 import { StoryReaderPage } from "../pages/StoryReaderPage";
 import { NotificationsPage } from "../pages/NotificationsPage";
 import { ProfilePage } from "../pages/ProfilePage";
@@ -147,6 +148,14 @@ export function AppRoutes() {
           element={
             <ProtectedRoute>
               <SettingsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/story-options"
+          element={
+            <ProtectedRoute>
+              <StoryOptionsPage />
             </ProtectedRoute>
           }
         />

@@ -3,12 +3,21 @@ import { Helmet } from "react-helmet-async";
 import { useForm } from "react-hook-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-toastify";
-import { Camera, Eye, EyeOff, Loader2 } from "lucide-react";
+import {
+  Camera,
+  Eye,
+  EyeOff,
+  Laptop,
+  Loader2,
+  Smartphone,
+} from "lucide-react";
 import { usersApi } from "../api/usersApi";
-import { authApi } from "../api/authApi";
+import { authApi, type SessionInfo } from "../api/authApi";
 import { Card, CardBody, CardHeader } from "../components/ui/Card";
 import { Input } from "../components/ui/field";
 import { Button } from "../components/ui/Button";
+import { Badge } from "../components/ui/Badge";
+import { ConfirmDialog } from "../components/ui/ConfirmDialog";
 import { PageLoader } from "../components/ui/Skeleton";
 import { useContentLoading } from "../layouts/PageLoading";
 import { ErrorState } from "../components/ui/States";
@@ -28,6 +37,38 @@ interface PasswordForm {
   currentPassword: string;
   newPassword: string;
   confirm: string;
+}
+
+const MOBILE_RE = /Mobile|Android|iPhone|iPad|Tablet/i;
+const OS_RE = /(Windows NT [\d.]+|Mac OS X [\d_]+|Android [\d.]+|iPhone OS [\d_]+|Linux)/i;
+type T = ReturnType<typeof useLanguage>["t"];
+
+function describeDevice(session: SessionInfo): { name: string; mobile: boolean } {
+  const ua = session.device;
+  const osMatch = ua.match(OS_RE);
+  const os = osMatch
+    ? osMatch[1].replace(/Mac OS X|iPhone OS/, "iOS").replace(/_/g, ".")
+    : "Device";
+  const label = ua.includes("Edg/")
+    ? "Edge"
+    : ua.includes("Firefox/")
+      ? "Firefox"
+      : ua.includes("Chrome/") && !ua.includes("Edg/")
+        ? "Chrome"
+        : ua.includes("Safari/") && !ua.includes("Chrome/")
+          ? "Safari"
+          : "Browser";
+  return { name: `${os} · ${label}`, mobile: MOBILE_RE.test(ua) };
+}
+
+function lastUsedLabel(t: T, lastUsedAt: string | null): string {
+  if (!lastUsedAt) return "—";
+  const diff = Date.now() - new Date(lastUsedAt).getTime();
+  if (diff < 60_000) return t.profile.sessionsJustNow;
+  const hours = Math.floor(diff / 3_600_000);
+  if (hours < 1) return `${t.profile.sessionsLastUsed} ${Math.floor(diff / 60_000)}m`;
+  if (hours < 24) return `${t.profile.sessionsLastUsed} ${hours}h`;
+  return `${t.profile.sessionsLastUsed} ${Math.floor(hours / 24)}d`;
 }
 
 export function ProfilePage() {
@@ -99,6 +140,35 @@ export function ProfilePage() {
       passwordForm.reset();
     },
     onError: (err) => toast.error(getErrorMessage(err) ?? t.common.error),
+  });
+
+  const sessionsQuery = useQuery({
+    queryKey: ["auth", "sessions"],
+    queryFn: authApi.sessions,
+    enabled: Boolean(user),
+  });
+
+  const [revokeTarget, setRevokeTarget] = useState<SessionInfo | null>(null);
+  const [revokeAllOpen, setRevokeAllOpen] = useState(false);
+
+  const revokeSession = useMutation({
+    mutationFn: (sessionId: string) => authApi.revokeSession(sessionId),
+    onSuccess: () => {
+      toast.success(t.profile.sessionRevoked);
+      void queryClient.invalidateQueries({ queryKey: ["auth", "sessions"] });
+    },
+    onError: (err) => toast.error(getErrorMessage(err) ?? t.common.error),
+    onSettled: () => setRevokeTarget(null),
+  });
+
+  const revokeOthers = useMutation({
+    mutationFn: () => authApi.revokeOtherSessions(),
+    onSuccess: () => {
+      toast.success(t.profile.otherSessionsRevoked);
+      void queryClient.invalidateQueries({ queryKey: ["auth", "sessions"] });
+    },
+    onError: (err) => toast.error(getErrorMessage(err) ?? t.common.error),
+    onSettled: () => setRevokeAllOpen(false),
   });
 
   const onSubmitProfile = profileForm.handleSubmit((v) =>
@@ -340,9 +410,113 @@ export function ProfilePage() {
                 </form>
               </CardBody>
             </Card>
+
+            <Card>
+              <CardHeader className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-lg font-bold text-fg">
+                    {t.profile.sessionsTitle}
+                  </h2>
+                  <p className="text-sm text-fg-muted">
+                    {t.profile.sessionsSubtitle}
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={() => setRevokeAllOpen(true)}
+                  disabled={!sessionsQuery.data?.some((s) => !s.current)}
+                  loading={revokeOthers.isPending}
+                >
+                  {t.profile.sessionsRevokeAll}
+                </Button>
+              </CardHeader>
+              <CardBody className="p-6">
+                {sessionsQuery.isError ? (
+                  <p className="text-sm text-red-600 dark:text-red-400">
+                    {t.profile.sessionsError}
+                  </p>
+                ) : sessionsQuery.isLoading ? (
+                  <p className="text-sm text-fg-muted">{t.common.loading}</p>
+                ) : sessionsQuery.data?.length ? (
+                  <ul className="divide-y divide-border">
+                    {sessionsQuery.data.map((session) => {
+                      const device = describeDevice(session);
+                      return (
+                        <li
+                          key={session.id}
+                          className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0"
+                        >
+                          <div className="flex min-w-0 items-center gap-3">
+                            <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-surface-2 text-fg-muted">
+                              {device.mobile ? (
+                                <Smartphone className="size-4.5" aria-hidden />
+                              ) : (
+                                <Laptop className="size-4.5" aria-hidden />
+                              )}
+                            </span>
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-medium text-fg">
+                                {device.name}
+                              </p>
+                              <p className="truncate text-xs text-fg-faint">
+                                {session.ipAddress} ·{" "}
+                                {lastUsedLabel(t, session.lastUsedAt)}
+                              </p>
+                            </div>
+                          </div>
+                          {session.current ? (
+                            <Badge tone="success" dot>
+                              {t.profile.sessionsCurrent}
+                            </Badge>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setRevokeTarget(session)}
+                              loading={
+                                revokeSession.isPending &&
+                                revokeSession.variables === session.id
+                              }
+                            >
+                              {t.profile.sessionsRevoke}
+                            </Button>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-fg-muted">{t.profile.sessionsEmpty}</p>
+                )}
+              </CardBody>
+            </Card>
           </div>
         </div>
       </section>
+      <ConfirmDialog
+        open={Boolean(revokeTarget)}
+        title={t.profile.sessionsConfirmTitle}
+        message={
+          revokeTarget
+            ? `${describeDevice(revokeTarget).name} · ${revokeTarget.ipAddress}`
+            : undefined
+        }
+        loading={revokeSession.isPending}
+        confirmLabel={t.profile.sessionsRevoke}
+        onConfirm={() =>
+          revokeTarget && revokeSession.mutate(revokeTarget.id)
+        }
+        onCancel={() => setRevokeTarget(null)}
+      />
+      <ConfirmDialog
+        open={revokeAllOpen}
+        title={t.profile.sessionsConfirmAllTitle}
+        message={t.profile.sessionsConfirmAllMessage}
+        loading={revokeOthers.isPending}
+        confirmLabel={t.profile.sessionsRevokeAll}
+        onConfirm={() => revokeOthers.mutate()}
+        onCancel={() => setRevokeAllOpen(false)}
+      />
     </>
   );
 }
