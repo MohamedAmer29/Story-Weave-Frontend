@@ -21,6 +21,7 @@ import {
 } from "../pages/auth/ForgotPasswordPage";
 import { DashboardPage } from "../pages/DashboardPage";
 import { LibraryPage } from "../pages/LibraryPage";
+import { FavouritesPage } from "../pages/FavouritesPage";
 import { CreateStoryPage } from "../pages/CreateStoryPage";
 import { EditStoryPage } from "../pages/EditStoryPage";
 import { StoryOptionsPage } from "../pages/StoryOptionsPage";
@@ -108,6 +109,14 @@ export function AppRoutes() {
           element={
             <ProtectedRoute>
               <LibraryPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/favourites"
+          element={
+            <ProtectedRoute>
+              <FavouritesPage />
             </ProtectedRoute>
           }
         />

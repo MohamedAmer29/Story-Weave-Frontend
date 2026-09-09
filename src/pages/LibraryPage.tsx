@@ -4,10 +4,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useGSAP } from "@gsap/react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { Plus, Search, Trash2, BookOpen } from "lucide-react";
+import { Plus, Search, Trash2, BookOpen, Heart } from "lucide-react";
 import { usersApi } from "../api/usersApi";
 import { storiesApi } from "../api/storiesApi";
 import type { StoryLibraryItem, StoryResponse, StoryType } from "../api/types";
+import { useAuth } from "../hooks/useAuth";
+import { useFavouritesIds } from "../hooks/useFavourites";
 import { StoryCard } from "../components/home/StoryCard";
 import { SkeletonGrid } from "../components/ui/Skeleton";
 import { EmptyState } from "../components/ui/States";
@@ -70,6 +72,9 @@ export function LibraryPage() {
     tab === "mine" ? mineQuery : tab === "shared" ? sharedQuery : publicQuery;
   const stories = (activeQuery.data?.data ?? []) as Array<StoryLibraryItem | StoryResponse>;
   const meta = activeQuery.data?.meta;
+
+  const { isAuthenticated } = useAuth();
+  const { favIds, isLoaded, isPending, toggle } = useFavouritesIds();
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => storiesApi.remove(id),
@@ -274,6 +279,28 @@ export function LibraryPage() {
                       footer={
                         tab === "mine" ? (
                           <>
+                            {isAuthenticated && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                disabled={!isLoaded || isPending}
+                                onClick={() => toggle(story.id)}
+                                aria-label={favIds.has(story.id) ? t.favourites.remove : t.favourites.add}
+                                className={cn(
+                                  "text-fg-muted hover:text-brand-600 dark:hover:text-brand-400",
+                                  favIds.has(story.id) && "text-brand-600 dark:text-brand-400"
+                                )}
+                              >
+                                <Heart
+                                  className={cn(
+                                    "size-4",
+                                    favIds.has(story.id) &&
+                                      "fill-brand-600 text-brand-600 dark:fill-brand-400 dark:text-brand-400"
+                                  )}
+                                  aria-hidden
+                                />
+                              </Button>
+                            )}
                             <Button
                               variant="ghost"
                               size="sm"
@@ -288,7 +315,29 @@ export function LibraryPage() {
                             </Button>
                           </>
                         ) : (
-                          <div className="ms-auto">
+                          <div className="ms-auto flex items-center gap-2">
+                            {isAuthenticated && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                disabled={!isLoaded || isPending}
+                                onClick={() => toggle(story.id)}
+                                aria-label={favIds.has(story.id) ? t.favourites.remove : t.favourites.add}
+                                className={cn(
+                                  "text-fg-muted hover:text-brand-600 dark:hover:text-brand-400",
+                                  favIds.has(story.id) && "text-brand-600 dark:text-brand-400"
+                                )}
+                              >
+                                <Heart
+                                  className={cn(
+                                    "size-4",
+                                    favIds.has(story.id) &&
+                                      "fill-brand-600 text-brand-600 dark:fill-brand-400 dark:text-brand-400"
+                                  )}
+                                  aria-hidden
+                                />
+                              </Button>
+                            )}
                             <Button size="sm" onClick={() => navigate(`/stories/${story.id}`)}>
                               {t.library.open}
                             </Button>

@@ -8,6 +8,11 @@ interface RetriableRequestConfig extends InternalAxiosRequestConfig {
   headers: InternalAxiosRequestConfig["headers"] & { _retry?: boolean };
 }
 
+interface ApiErrorPayload {
+  errorCode?: string;
+  message?: string | string[];
+}
+
 /** Single shared Axios instance for the whole app. */
 export const api = axios.create({
   baseURL: API_URL,
@@ -54,21 +59,33 @@ api.interceptors.response.use(
     const original = error.config as RetriableRequestConfig | undefined;
     const isAuthRefresh = original?.url?.includes("/auth/refresh-token");
     const status = error.response?.status;
-    const errorData = error.response?.data as any;
+    const errorData = error.response?.data as ApiErrorPayload | undefined;
     const errorCode = errorData?.errorCode;
 
-    if (errorCode === "ACCESS_TOKEN_INVALIDATED") {
-      store.dispatch(clearCredentials());
-      return Promise.reject(error);
-    }
+    const hadToken = Boolean(original?.headers?.Authorization);
+    const notYetRetried =
+      Boolean(original) && !isAuthRefresh && !original!.headers._retry;
+    const authProblem =
+      status === 401 || errorCode === "ACCESS_TOKEN_INVALIDATED";
 
-    if (status === 401 && original && !isAuthRefresh && !original.headers._retry) {
-      original.headers._retry = true;
+    // Sliding session: an expired access token, or an older-version token that
+    // was superseded by a refresh, is not a real logout — refresh once and
+    // replay the request with the new token.
+    if (hadToken && notYetRetried && authProblem) {
+      original!.headers._retry = true;
       const token = await requestRefresh();
       if (token) {
-        original.headers.Authorization = `Bearer ${token}`;
-        return api(original);
+        original!.headers.Authorization = `Bearer ${token}`;
+        return api(original!);
       }
+    }
+
+    // Only a session that cannot be renewed (refresh token revoked/expired, or
+    // a second rejection right after being reissued) ends the session.
+    if (
+      errorCode === "ACCESS_TOKEN_INVALIDATED" ||
+      (status === 401 && original?.headers._retry)
+    ) {
       store.dispatch(clearCredentials());
     }
     return Promise.reject(error);

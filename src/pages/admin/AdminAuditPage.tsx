@@ -22,6 +22,8 @@ export function AdminAuditPage() {
   const query = useQuery({
     queryKey: ["admin", "audit", { page, search }],
     queryFn: () => adminApi.audit({ page, limit: 20, search: search || undefined }),
+    refetchInterval: 5000,
+    refetchIntervalInBackground: true,
   });
 
   const audits = query.data?.data ?? [];

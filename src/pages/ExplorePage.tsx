@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { useQuery } from "@tanstack/react-query";
-import { Search } from "lucide-react";
+import { Heart, Search } from "lucide-react";
 import { storiesApi } from "../api/storiesApi";
 import type { StoryType } from "../api/types";
 import { StoryCard } from "../components/home/StoryCard";
@@ -9,7 +9,11 @@ import { SkeletonGrid } from "../components/ui/Skeleton";
 import { EmptyState, ErrorState } from "../components/ui/States";
 import { Input, Select } from "../components/ui/field";
 import { Pagination } from "../components/ui/Pagination";
+import { Button } from "../components/ui/Button";
 import { useLanguage } from "../i18n";
+import { useAuth } from "../hooks/useAuth";
+import { useFavouritesIds } from "../hooks/useFavourites";
+import { cn } from "../lib/cn";
 
 export function ExplorePage() {
   const { t } = useLanguage();
@@ -17,6 +21,9 @@ export function ExplorePage() {
   const [page, setPage] = useState(1);
   const [sort, setSort] = useState<"latest" | "oldest" | "updated">("latest");
   const [storyType, setStoryType] = useState<"" | StoryType>("");
+
+  const { isAuthenticated } = useAuth();
+  const { favIds, isLoaded, isPending, toggle } = useFavouritesIds(isAuthenticated);
 
   const query = useQuery({
     queryKey: ["stories", "explore", { page, search, sort, storyType }],
@@ -105,7 +112,36 @@ export function ExplorePage() {
               <>
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
                   {stories.map((story) => (
-                    <StoryCard key={story.id} story={story} />
+                    <StoryCard
+                      key={story.id}
+                      story={story}
+                      footer={
+                        isAuthenticated ? (
+                          <div className="ms-auto flex items-center gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              disabled={!isLoaded || isPending}
+                              onClick={() => toggle(story.id)}
+                              aria-label={favIds.has(story.id) ? t.favourites.remove : t.favourites.add}
+                              className={cn(
+                                "text-fg-muted hover:text-brand-600 dark:hover:text-brand-400",
+                                favIds.has(story.id) && "text-brand-600 dark:text-brand-400"
+                              )}
+                            >
+                              <Heart
+                                className={cn(
+                                  "size-4",
+                                  favIds.has(story.id) &&
+                                    "fill-brand-600 text-brand-600 dark:fill-brand-400 dark:text-brand-400"
+                                )}
+                                aria-hidden
+                              />
+                            </Button>
+                          </div>
+                        ) : undefined
+                      }
+                    />
                   ))}
                 </div>
                 <Pagination

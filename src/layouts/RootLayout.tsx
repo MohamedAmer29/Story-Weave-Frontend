@@ -7,6 +7,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Compass,
+  Heart,
   LayoutDashboard,
   Library,
   LogOut,
@@ -51,6 +52,7 @@ function SidebarContent({ collapsed = false }: { collapsed?: boolean }) {
   const mainNavItems = [
     { to: "/dashboard", label: t.nav.dashboard, icon: LayoutDashboard },
     { to: "/library", label: t.nav.myStories, icon: Library },
+    { to: "/favourites", label: t.nav.favourites, icon: Heart },
     { to: "/explore", label: t.nav.explore, icon: Compass },
     { to: "/create", label: t.nav.createStory, icon: PlusCircle },
     { to: "/story-options", label: t.nav.storyOptions, icon: Tags },

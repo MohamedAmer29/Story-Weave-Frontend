@@ -1,56 +1,91 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Clock, RefreshCw } from "lucide-react";
 import { toast } from "react-toastify";
 import { authApi } from "../../api/authApi";
+import { requestRefresh } from "../../api/axios";
 import { useAppDispatch, useAppSelector } from "../../store";
-import { clearCredentials, setToken } from "../../store/authSlice";
+import { clearCredentials } from "../../store/authSlice";
 import { useLanguage } from "../../i18n";
 import { getErrorMessage } from "../../api/axios";
 
-const SESSION_DURATION_MS = 15 * 60 * 1000; // 15 minutes
 const WARNING_THRESHOLD_MS = 3 * 60 * 1000; // 3 minutes warning
+
+/** Decodes the actual `exp` claim of a JWT into epoch milliseconds. */
+function getTokenExpiryMs(token: string): number | null {
+  try {
+    const payload = token.split(".")[1];
+    if (!payload) return null;
+    const json = atob(payload.replace(/-/g, "+").replace(/_/g, "/"));
+    const decoded = JSON.parse(json);
+    return typeof decoded.exp === "number" ? decoded.exp * 1000 : null;
+  } catch {
+    return null;
+  }
+}
 
 export function SessionExtensionBanner() {
   const { t } = useLanguage();
   const dispatch = useAppDispatch();
   const queryClient = useQueryClient();
-  const { user, token, tokenIssuedAt } = useAppSelector((state) => state.auth);
+  const { user, token } = useAppSelector((state) => state.auth);
 
   const [remainingMs, setRemainingMs] = useState<number | null>(null);
+  const autoExtendedRef = useRef(false);
+
+  const expiresAt = useMemo(
+    () => (token ? getTokenExpiryMs(token) : null),
+    [token]
+  );
 
   useEffect(() => {
-    if (!user || !token || !tokenIssuedAt) {
-      // Clear remaining countdown when logged out
+    autoExtendedRef.current = false;
+    if (!user || !token || !expiresAt) {
+      // Clear remaining countdown when logged out or when exp is unreadable.
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setRemainingMs(null);
       return;
     }
 
     const checkTime = () => {
-      const expiresAt = tokenIssuedAt + SESSION_DURATION_MS;
       const left = expiresAt - Date.now();
-      if (left <= 0) {
-        setRemainingMs(0);
-        // User did not extend session within 15 minutes -> log out user
-        void authApi.logout().catch(() => {});
-        dispatch(clearCredentials());
-        queryClient.clear();
-        toast.warn(t.session.expiredToast);
-      } else {
+      if (left > 0) {
         setRemainingMs(left);
+        return;
+      }
+
+      // Access token expired — silently renew the session instead of logging
+      // the user out for not pressing "Extend".
+      setRemainingMs(0);
+      if (!autoExtendedRef.current) {
+        autoExtendedRef.current = true;
+        void (async () => {
+          const newToken = await requestRefresh();
+          if (!newToken) {
+            void authApi.logout().catch(() => {});
+            dispatch(clearCredentials());
+            queryClient.clear();
+            toast.warn(t.session.expiredToast);
+          }
+        })();
       }
     };
 
     checkTime();
     const interval = setInterval(checkTime, 1000);
     return () => clearInterval(interval);
-  }, [user, token, tokenIssuedAt, dispatch, queryClient, t]);
+  }, [user, token, expiresAt, dispatch, queryClient, t]);
 
   const extendMutation = useMutation({
-    mutationFn: () => authApi.refreshToken(),
-    onSuccess: (res) => {
-      dispatch(setToken(res.accessToken));
+    mutationFn: () => requestRefresh(),
+    onSuccess: (newToken) => {
+      if (!newToken) {
+        toast.error(t.common.error);
+        void authApi.logout().catch(() => {});
+        dispatch(clearCredentials());
+        queryClient.clear();
+        return;
+      }
       void queryClient.invalidateQueries();
       toast.success(t.session.extendedSuccess);
     },

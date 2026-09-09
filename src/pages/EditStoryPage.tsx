@@ -11,6 +11,7 @@ import { Input, Select, Textarea } from "../components/ui/field";
 import { CatalogSelect } from "../components/ui/CatalogSelect";
 import { CivilizationSelect } from "../components/ui/CivilizationSelect";
 import { Button } from "../components/ui/Button";
+import { ConfirmDialog } from "../components/ui/ConfirmDialog";
 import { PageLoader } from "../components/ui/Skeleton";
 import { useContentLoading } from "../layouts/PageLoading";
 import { ErrorState } from "../components/ui/States";
@@ -154,6 +155,7 @@ export function EditStoryPage() {
   const civilization = watch("civilization");
   const theme = watch("theme");
   const [saving, setSaving] = useState(false);
+  const [discardOpen, setDiscardOpen] = useState(false);
   const [pageDrafts, setPageDrafts] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -533,8 +535,9 @@ export function EditStoryPage() {
 
           <div className="flex justify-end gap-3">
             <Button
+              type="button"
               variant="outline"
-              onClick={() => navigate(`/stories/${storyId}`)}
+              onClick={() => setDiscardOpen(true)}
             >
               {t.common.cancel}
             </Button>
@@ -544,6 +547,15 @@ export function EditStoryPage() {
           </div>
         </form>
       </section>
+      <ConfirmDialog
+        open={discardOpen}
+        title={t.common.discardChangesTitle}
+        message={t.common.discardChangesMessage}
+        confirmLabel={t.common.discardChanges}
+        variant="danger"
+        onConfirm={() => navigate(`/stories/${storyId}`)}
+        onCancel={() => setDiscardOpen(false)}
+      />
     </>
   );
 }

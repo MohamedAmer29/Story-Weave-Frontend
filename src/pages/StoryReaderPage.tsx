@@ -10,6 +10,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Globe,
+  Heart,
   ListPlus,
   Loader2,
   Lock,
@@ -21,6 +22,7 @@ import {
   X,
 } from "lucide-react";
 import { storiesApi, illustrationApi } from "../api/storiesApi";
+import { favouritesApi } from "../api/favouritesApi";
 import { Button } from "../components/ui/Button";
 import { Input, Textarea } from "../components/ui/field";
 import { Badge } from "../components/ui/Badge";
@@ -34,7 +36,8 @@ import { getErrorMessage } from "../api/axios";
 import { useAuth } from "../hooks/useAuth";
 import { useLanguage } from "../i18n";
 import { getCivilizationLabel } from "../constants/civilizations";
-import { useStoryCivilizations } from "../hooks/useStoryOptions";
+import { humanize } from "../lib/storyCatalog";
+import { useStoryCivilizations, useStoryEras } from "../hooks/useStoryOptions";
 import { useAppDispatch, useAppSelector } from "../store";
 import { setPage as savePage } from "../store/readerSlice";
 import { cn } from "../lib/cn";
@@ -198,7 +201,7 @@ export function StoryReaderPage() {
   const { id } = useParams<{ id: string }>();
   const { t, dir } = useLanguage();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
   const dispatch = useAppDispatch();
   const [shareOpen, setShareOpen] = useState(false);
@@ -225,6 +228,37 @@ export function StoryReaderPage() {
   });
 
   const { data: civilizationOptions } = useStoryCivilizations();
+  const { data: eraOptions } = useStoryEras();
+
+  const favoriteQuery = useQuery({
+    queryKey: ["story", storyId, "favorite"],
+    queryFn: () => favouritesApi.status(storyId),
+    enabled: Boolean(isAuthenticated && storyId),
+  });
+
+  const favoriteMutation = useMutation({
+    mutationFn: (favoritedNow: boolean) =>
+      favoritedNow
+        ? favouritesApi.remove(storyId)
+        : favouritesApi.add(storyId),
+    onMutate: async (favoritedNow) => {
+      await queryClient.cancelQueries({
+        queryKey: ["story", storyId, "favorite"],
+      });
+      queryClient.setQueryData(["story", storyId, "favorite"], {
+        favorited: !favoritedNow,
+      });
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["favourites"] });
+    },
+    onError: (err) => {
+      void queryClient.invalidateQueries({
+        queryKey: ["story", storyId, "favorite"],
+      });
+      toast.error(getErrorMessage(err) ?? t.common.error);
+    },
+  });
 
   const isOwner = Boolean(user && storyId && user.id === query.data?.author.id);
 
@@ -476,15 +510,45 @@ export function StoryReaderPage() {
             </h2>
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShareOpen(true)}
-              className="gap-1.5 text-fg-muted hover:text-fg"
-            >
-              <Share2 className="size-4" aria-hidden />
-              <span className="hidden sm:inline">{t.reader.share}</span>
-            </Button>
+            {isAuthenticated && story.status === "READY" && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => favoriteMutation.mutate(favoriteQuery.data?.favorited ?? false)}
+                disabled={favoriteMutation.isPending}
+                className="gap-1.5 text-fg-muted hover:text-fg"
+                aria-label={
+                  favoriteQuery.data?.favorited
+                    ? t.favourites.remove
+                    : t.favourites.add
+                }
+              >
+                <Heart
+                  className={`size-4 ${
+                    favoriteQuery.data?.favorited
+                      ? "fill-brand-600 text-brand-600 dark:fill-brand-400 dark:text-brand-400"
+                      : ""
+                  }`}
+                  aria-hidden
+                />
+                <span className="hidden sm:inline">
+                  {favoriteQuery.data?.favorited
+                    ? t.favourites.favourited
+                    : t.favourites.add}
+                </span>
+              </Button>
+            )}
+            {isAuthenticated && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShareOpen(true)}
+                className="gap-1.5 text-fg-muted hover:text-fg"
+              >
+                <Share2 className="size-4" aria-hidden />
+                <span className="hidden sm:inline">{t.reader.share}</span>
+              </Button>
+            )}
             {isOwner && (
               <Button
                 variant="outline"
@@ -610,13 +674,17 @@ export function StoryReaderPage() {
               </p>
 
               <div className="mt-6 grid max-w-md grid-cols-2 gap-3 text-sm sm:grid-cols-3">
-                {story.era && (
+                {Boolean(story.era || story.eraId || story.eraName) && (
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wide text-fg-faint">
                       {t.create.era}
                     </p>
                     <p className="font-medium text-fg">
-                      {story.era === "UNSPECIFIED" ? "—" : story.era}
+                      {story.eraName ??
+                        eraOptions?.find((e) => e.id === story.eraId)?.name ??
+                        (story.era && story.era !== "UNSPECIFIED"
+                          ? humanize(story.era)
+                          : "—")}
                     </p>
                   </div>
                 )}
@@ -639,6 +707,7 @@ export function StoryReaderPage() {
                 {Boolean(
                   story.civilization ||
                     story.civilizationId ||
+                    story.civilizationName ||
                     story.customCivilization,
                 ) && (
                   <div>
@@ -646,15 +715,16 @@ export function StoryReaderPage() {
                       {t.create.civilization}
                     </p>
                     <p className="font-medium text-fg">
-                      {story.civilization === "UNSPECIFIED"
-                        ? "—"
-                        : story.customCivilization ||
-                          getCivilizationLabel(story.civilization) ||
-                          civilizationOptions?.find(
-                            (c) => c.id === story.civilizationId,
-                          )?.name ||
-                          story.civilization ||
-                          "—"}
+                      {story.civilizationName ||
+                        story.customCivilization ||
+                        (story.civilization &&
+                        story.civilization !== "UNSPECIFIED"
+                          ? getCivilizationLabel(story.civilization) ||
+                            story.civilization
+                          : civilizationOptions?.find(
+                              (c) => c.id === story.civilizationId,
+                            )?.name) ||
+                        "—"}
                     </p>
                   </div>
                 )}

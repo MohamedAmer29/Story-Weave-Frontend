@@ -39,6 +39,7 @@ function userLinks(t: ReturnType<typeof useLanguage>["t"]): NavLinkDef[] {
   return [
     { to: "/dashboard", key: t.nav.dashboard },
     { to: "/library", key: t.nav.myStories },
+    { to: "/favourites", key: t.nav.favourites },
     { to: "/create", key: t.nav.createStory },
     // { to: "/story-options", key: t.nav.storyOptions },
   ];
