@@ -34,11 +34,18 @@ export function LibraryPage() {
   const [status, setStatus] = useState("");
   const [visibility, setVisibility] = useState("");
   const [storyType, setStoryType] = useState<"" | StoryType>("");
-  const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
   const rootRef = useRef<HTMLElement>(null);
 
   const mineQuery = useQuery({
-    queryKey: ["library", "mine", { page, search, status, visibility, storyType }],
+    queryKey: [
+      "library",
+      "mine",
+      { page, search, status, visibility, storyType },
+    ],
     queryFn: () =>
       usersApi.myStories({
         page,
@@ -53,7 +60,8 @@ export function LibraryPage() {
 
   const sharedQuery = useQuery({
     queryKey: ["library", "shared", { page, search }],
-    queryFn: () => usersApi.sharedStories({ page, limit: 9, search: search || undefined }),
+    queryFn: () =>
+      usersApi.sharedStories({ page, limit: 9, search: search || undefined }),
     enabled: tab === "shared",
   });
 
@@ -70,7 +78,9 @@ export function LibraryPage() {
 
   const activeQuery =
     tab === "mine" ? mineQuery : tab === "shared" ? sharedQuery : publicQuery;
-  const stories = (activeQuery.data?.data ?? []) as Array<StoryLibraryItem | StoryResponse>;
+  const stories = (activeQuery.data?.data ?? []) as Array<
+    StoryLibraryItem | StoryResponse
+  >;
   const meta = activeQuery.data?.meta;
 
   const { isAuthenticated } = useAuth();
@@ -108,7 +118,10 @@ export function LibraryPage() {
         { y: 0, opacity: 1, duration: 0.75, stagger: 0.06, ease: revealEase },
       );
     },
-    { scope: rootRef, dependencies: [tab, page, search, status, visibility, storyType] },
+    {
+      scope: rootRef,
+      dependencies: [tab, page, search, status, visibility, storyType],
+    },
   );
 
   return (
@@ -118,11 +131,21 @@ export function LibraryPage() {
           {t.library.title} · {t.brand.name}
         </title>
       </Helmet>
-      <section ref={rootRef} className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-        <div data-page-reveal className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+      <section
+        ref={rootRef}
+        className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8"
+      >
+        <div
+          data-page-reveal
+          className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end"
+        >
           <div>
-            <h1 className="font-display text-3xl font-bold text-display-tight text-fg sm:text-4xl">{t.library.title}</h1>
-            <p className="mt-2 text-copy-rhythm text-fg-muted">{t.library.subtitle}</p>
+            <h1 className="font-display text-3xl font-bold text-display-tight text-fg sm:text-4xl">
+              {t.library.title}
+            </h1>
+            <p className="mt-2 text-copy-rhythm text-fg-muted">
+              {t.library.subtitle}
+            </p>
           </div>
           <Button onClick={() => navigate("/create")}>
             <Plus className="size-4" aria-hidden />
@@ -130,8 +153,15 @@ export function LibraryPage() {
           </Button>
         </div>
 
-        <div data-page-reveal className="mt-6 flex flex-col gap-3 lg:flex-row lg:items-center">
-          <div className="flex rounded-lg border border-border bg-surface p-1" role="tablist" aria-label="Library tabs">
+        <div
+          data-page-reveal
+          className="mt-6 flex flex-col gap-3 lg:flex-row lg:items-center"
+        >
+          <div
+            className="flex rounded-lg border border-border bg-surface p-1"
+            role="tablist"
+            aria-label="Library tabs"
+          >
             <button
               role="tab"
               aria-selected={tab === "mine"}
@@ -141,7 +171,9 @@ export function LibraryPage() {
               }}
               className={cn(
                 "rounded-md px-4 py-2 text-sm font-medium transition-colors",
-                tab === "mine" ? "bg-brand-600 text-white" : "text-fg-muted hover:text-fg"
+                tab === "mine"
+                  ? "bg-brand-600 text-white"
+                  : "text-fg-muted hover:text-fg",
               )}
             >
               {t.library.title}
@@ -155,7 +187,9 @@ export function LibraryPage() {
               }}
               className={cn(
                 "rounded-md px-4 py-2 text-sm font-medium transition-colors",
-                tab === "shared" ? "bg-brand-600 text-white" : "text-fg-muted hover:text-fg"
+                tab === "shared"
+                  ? "bg-brand-600 text-white"
+                  : "text-fg-muted hover:text-fg",
               )}
             >
               {t.library.sharedTitle}
@@ -169,7 +203,9 @@ export function LibraryPage() {
               }}
               className={cn(
                 "rounded-md px-4 py-2 text-sm font-medium transition-colors",
-                tab === "public" ? "bg-brand-600 text-white" : "text-fg-muted hover:text-fg"
+                tab === "public"
+                  ? "bg-brand-600 text-white"
+                  : "text-fg-muted hover:text-fg",
               )}
             >
               {t.explore.title}
@@ -177,7 +213,10 @@ export function LibraryPage() {
           </div>
 
           <div className="relative flex-1">
-            <Search className="absolute start-3.5 top-1/2 size-4 -translate-y-1/2 text-fg-faint" aria-hidden />
+            <Search
+              className="absolute start-3.5 top-1/2 size-4 -translate-y-1/2 text-fg-faint"
+              aria-hidden
+            />
             <Input
               value={search}
               onChange={(e) => {
@@ -202,11 +241,13 @@ export function LibraryPage() {
                 className="lg:w-44"
               >
                 <option value="">{t.library.status}</option>
-                {(["DRAFT", "PROCESSING", "READY", "FAILED"] as const).map((s) => (
-                  <option key={s} value={s}>
-                    {t.status[s]}
-                  </option>
-                ))}
+                {(["DRAFT", "PROCESSING", "READY", "FAILED"] as const).map(
+                  (s) => (
+                    <option key={s} value={s}>
+                      {t.status[s]}
+                    </option>
+                  ),
+                )}
               </Select>
               <Select
                 value={visibility}
@@ -218,11 +259,13 @@ export function LibraryPage() {
                 className="lg:w-40"
               >
                 <option value="">{t.library.visibility}</option>
-                {(["PUBLIC", "PRIVATE", "SHARED"] as const).map((v) => (
-                  <option key={v} value={v}>
-                    {t.status[v]}
-                  </option>
-                ))}
+                {(["PUBLIC", "MEMBERS", "PRIVATE", "SHARED"] as const).map(
+                  (v) => (
+                    <option key={v} value={v}>
+                      {t.status[v]}
+                    </option>
+                  ),
+                )}
               </Select>
               <Select
                 value={storyType}
@@ -234,7 +277,23 @@ export function LibraryPage() {
                 className="lg:w-44"
               >
                 <option value="">{t.create.storyType}</option>
-                {(["FANTASY", "ADVENTURE", "SCI_FI", "MYSTERY", "HORROR", "ROMANCE", "COMEDY", "DRAMA", "HISTORICAL", "FAIRY_TALE", "CHILDREN", "ACTION", "THRILLER"] as const).map((st) => (
+                {(
+                  [
+                    "FANTASY",
+                    "ADVENTURE",
+                    "SCI_FI",
+                    "MYSTERY",
+                    "HORROR",
+                    "ROMANCE",
+                    "COMEDY",
+                    "DRAMA",
+                    "HISTORICAL",
+                    "FAIRY_TALE",
+                    "CHILDREN",
+                    "ACTION",
+                    "THRILLER",
+                  ] as const
+                ).map((st) => (
                   <option key={st} value={st}>
                     {st.replace(/_/g, " ")}
                   </option>
@@ -248,11 +307,24 @@ export function LibraryPage() {
           {activeQuery.isLoading ? (
             <SkeletonGrid count={6} />
           ) : activeQuery.isError ? (
-            <EmptyState title={t.explore.error} action={<Button onClick={() => activeQuery.refetch()}>{t.common.retry}</Button>} />
+            <EmptyState
+              title={t.explore.error}
+              action={
+                <Button onClick={() => activeQuery.refetch()}>
+                  {t.common.retry}
+                </Button>
+              }
+            />
           ) : stories.length === 0 ? (
             <EmptyState
               icon={<BookOpen className="size-6" />}
-              title={tab === "mine" ? t.library.empty : tab === "shared" ? t.library.sharedEmpty : t.explore.empty}
+              title={
+                tab === "mine"
+                  ? t.library.empty
+                  : tab === "shared"
+                    ? t.library.sharedEmpty
+                    : t.explore.empty
+              }
               description={tab === "mine" ? t.library.emptyHint : undefined}
               action={
                 filtersActive ? (
@@ -260,14 +332,19 @@ export function LibraryPage() {
                     {t.library.clearFilters}
                   </Button>
                 ) : tab === "mine" ? (
-                  <Button onClick={() => navigate("/create")}>{t.nav.createStory}</Button>
+                  <Button onClick={() => navigate("/create")}>
+                    {t.nav.createStory}
+                  </Button>
                 ) : undefined
               }
             />
           ) : (
             <>
               {filtersActive && (
-                <button onClick={resetFilters} className="mb-4 text-sm font-semibold text-brand-600 hover:underline dark:text-brand-400">
+                <button
+                  onClick={resetFilters}
+                  className="mb-4 text-sm font-semibold text-brand-600 hover:underline dark:text-brand-400"
+                >
                   {t.library.clearFilters}
                 </button>
               )}
@@ -285,17 +362,22 @@ export function LibraryPage() {
                                 size="sm"
                                 disabled={!isLoaded || isPending}
                                 onClick={() => toggle(story.id)}
-                                aria-label={favIds.has(story.id) ? t.favourites.remove : t.favourites.add}
+                                aria-label={
+                                  favIds.has(story.id)
+                                    ? t.favourites.remove
+                                    : t.favourites.add
+                                }
                                 className={cn(
                                   "text-fg-muted hover:text-brand-600 dark:hover:text-brand-400",
-                                  favIds.has(story.id) && "text-brand-600 dark:text-brand-400"
+                                  favIds.has(story.id) &&
+                                    "text-brand-600 dark:text-brand-400",
                                 )}
                               >
                                 <Heart
                                   className={cn(
                                     "size-4",
                                     favIds.has(story.id) &&
-                                      "fill-brand-600 text-brand-600 dark:fill-brand-400 dark:text-brand-400"
+                                      "fill-brand-600 text-brand-600 dark:fill-brand-400 dark:text-brand-400",
                                   )}
                                   aria-hidden
                                 />
@@ -304,13 +386,21 @@ export function LibraryPage() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => setDeleteTarget({ id: story.id, title: story.title })}
+                              onClick={() =>
+                                setDeleteTarget({
+                                  id: story.id,
+                                  title: story.title,
+                                })
+                              }
                               aria-label={`${t.library.delete}: ${story.title}`}
                               className="text-fg-muted hover:text-red-600 dark:hover:text-red-400"
                             >
                               <Trash2 className="size-4" />
                             </Button>
-                            <Button size="sm" onClick={() => navigate(`/stories/${story.id}`)}>
+                            <Button
+                              size="sm"
+                              onClick={() => navigate(`/stories/${story.id}`)}
+                            >
                               {t.library.open}
                             </Button>
                           </>
@@ -322,23 +412,31 @@ export function LibraryPage() {
                                 size="sm"
                                 disabled={!isLoaded || isPending}
                                 onClick={() => toggle(story.id)}
-                                aria-label={favIds.has(story.id) ? t.favourites.remove : t.favourites.add}
+                                aria-label={
+                                  favIds.has(story.id)
+                                    ? t.favourites.remove
+                                    : t.favourites.add
+                                }
                                 className={cn(
                                   "text-fg-muted hover:text-brand-600 dark:hover:text-brand-400",
-                                  favIds.has(story.id) && "text-brand-600 dark:text-brand-400"
+                                  favIds.has(story.id) &&
+                                    "text-brand-600 dark:text-brand-400",
                                 )}
                               >
                                 <Heart
                                   className={cn(
                                     "size-4",
                                     favIds.has(story.id) &&
-                                      "fill-brand-600 text-brand-600 dark:fill-brand-400 dark:text-brand-400"
+                                      "fill-brand-600 text-brand-600 dark:fill-brand-400 dark:text-brand-400",
                                   )}
                                   aria-hidden
                                 />
                               </Button>
                             )}
-                            <Button size="sm" onClick={() => navigate(`/stories/${story.id}`)}>
+                            <Button
+                              size="sm"
+                              onClick={() => navigate(`/stories/${story.id}`)}
+                            >
                               {t.library.open}
                             </Button>
                           </div>
@@ -374,7 +472,9 @@ export function LibraryPage() {
           <Button
             variant="danger"
             loading={deleteMutation.isPending}
-            onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+            onClick={() =>
+              deleteTarget && deleteMutation.mutate(deleteTarget.id)
+            }
           >
             {t.common.delete}
           </Button>

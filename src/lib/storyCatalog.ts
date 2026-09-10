@@ -1,4 +1,5 @@
 import type { StoryOption } from "../api/types";
+import type { StoryCivilization } from "../constants/civilizations";
 
 export interface CatalogOption {
   value: string;
@@ -105,4 +106,49 @@ export function loadCatalogOptions(
     return { options: data.map(toCatalogOption), isFallback: false };
   }
   return { options: legacyPlaceholders(legacyValues, []), isFallback: true };
+}
+
+/** Civilization form field is free text; the value text is mapped to the
+ * persistence fields: a catalog match keeps the stored id/legacy enum, any
+ * other (or typed) text is stored as a custom civilization. */
+export function resolveCivilizationValue(
+  value: string | undefined,
+  catalog: CatalogOption[],
+): {
+  civilization: StoryCivilization | undefined;
+  customCivilization: string | undefined;
+  civilizationId: string | undefined;
+} {
+  const text = (value ?? "").trim();
+  if (!text || text === "UNSPECIFIED") {
+    return {
+      civilization: undefined,
+      customCivilization: undefined,
+      civilizationId: undefined,
+    };
+  }
+  const option = catalog.find(
+    (c) => c.value === text || c.legacyValue === text,
+  );
+  if (option && isCatalogId(option.value)) {
+    return {
+      civilization: option.legacyValue
+        ? (option.legacyValue as StoryCivilization)
+        : undefined,
+      customCivilization: undefined,
+      civilizationId: option.value,
+    };
+  }
+  if (option) {
+    return {
+      civilization: (option.legacyValue ?? option.value) as StoryCivilization,
+      customCivilization: undefined,
+      civilizationId: undefined,
+    };
+  }
+  return {
+    civilization: undefined,
+    customCivilization: text,
+    civilizationId: undefined,
+  };
 }

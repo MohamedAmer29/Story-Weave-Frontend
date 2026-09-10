@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Logo } from "../ui/Logo";
 import { LanguageSwitcher, ThemeToggle } from "./themeControls";
 import { useAuth } from "../../hooks/useAuth";
@@ -7,6 +7,24 @@ import { useLanguage } from "../../i18n";
 export function Footer() {
   const { t } = useLanguage();
   const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+
+  const scrollToFeatures = () => {
+    if (window.location.pathname === "/") {
+      document.getElementById("features")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+      return;
+    }
+    navigate("/");
+    requestAnimationFrame(() => {
+      document.getElementById("features")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
+  };
 
   if (isAuthenticated) {
     return (
@@ -62,16 +80,14 @@ export function Footer() {
                   {t.nav.howItWorks}
                 </Link>
               </li>
-              {isAuthenticated && (
-                <li>
-                  <Link
-                    to="/create"
-                    className="text-fg-muted transition-colors hover:text-brand-600"
-                  >
-                    {t.footer.createStory}
-                  </Link>
-                </li>
-              )}
+              <li>
+                <Link
+                  to="/register"
+                  className="text-fg-muted transition-colors hover:text-brand-600"
+                >
+                  {t.footer.createStory}
+                </Link>
+              </li>
             </ul>
           </nav>
 
@@ -81,32 +97,29 @@ export function Footer() {
             </h3>
             <ul className="mt-3 space-y-2 text-sm">
               <li>
-                <span className="cursor-default text-fg-muted">
+                <Link
+                  to="/about"
+                  className="text-fg-muted transition-colors hover:text-brand-600"
+                >
                   {t.footer.about}
-                </span>
+                </Link>
               </li>
               <li>
                 <button
                   type="button"
-                  onClick={() => {
-                    if (window.location.pathname === "/") {
-                      document.getElementById("features")?.scrollIntoView({
-                        behavior: "smooth",
-                        block: "start",
-                      });
-                      return;
-                    }
-                    window.location.href = "/#features";
-                  }}
+                  onClick={scrollToFeatures}
                   className="text-fg-muted transition-colors hover:text-brand-600"
                 >
                   {t.nav.features}
                 </button>
               </li>
               <li>
-                <span className="cursor-default text-fg-muted">
+                <Link
+                  to="/contact"
+                  className="text-fg-muted transition-colors hover:text-brand-600"
+                >
                   {t.footer.contact}
-                </span>
+                </Link>
               </li>
             </ul>
           </nav>
@@ -117,14 +130,20 @@ export function Footer() {
             </h3>
             <ul className="mt-3 space-y-2 text-sm">
               <li>
-                <span className="cursor-default text-fg-muted">
+                <Link
+                  to="/privacy"
+                  className="text-fg-muted transition-colors hover:text-brand-600"
+                >
                   {t.footer.privacy}
-                </span>
+                </Link>
               </li>
               <li>
-                <span className="cursor-default text-fg-muted">
+                <Link
+                  to="/terms"
+                  className="text-fg-muted transition-colors hover:text-brand-600"
+                >
                   {t.footer.terms}
-                </span>
+                </Link>
               </li>
             </ul>
           </nav>

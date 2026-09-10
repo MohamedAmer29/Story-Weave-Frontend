@@ -12,6 +12,7 @@ const statusTone: Record<StoryStatus, BadgeProps["tone"]> = {
 
 const visibilityTone: Record<StoryVisibility, BadgeProps["tone"]> = {
   PUBLIC: "brand",
+  MEMBERS: "info",
   PRIVATE: "neutral",
   SHARED: "info",
 };
@@ -25,12 +26,22 @@ export function StatusBadge({ status }: { status: StoryStatus }) {
   );
 }
 
-export function VisibilityBadge({ visibility }: { visibility: StoryVisibility }) {
+export function VisibilityBadge({
+  visibility,
+}: {
+  visibility: StoryVisibility;
+}) {
   const { t } = useLanguage();
-  return <Badge tone={visibilityTone[visibility]}>{t.status[visibility]}</Badge>;
+  return (
+    <Badge tone={visibilityTone[visibility]}>{t.status[visibility]}</Badge>
+  );
 }
 
-export function SourceTypeBadge({ sourceType }: { sourceType: "TEXT" | "PDF" }) {
+export function SourceTypeBadge({
+  sourceType,
+}: {
+  sourceType: "TEXT" | "PDF";
+}) {
   const { t } = useLanguage();
   return <Badge tone="neutral">{t.status[sourceType]}</Badge>;
 }

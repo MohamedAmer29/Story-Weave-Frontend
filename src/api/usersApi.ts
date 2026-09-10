@@ -2,6 +2,7 @@ import { api } from "./axios";
 import type {
   ApiResponse,
   PaginatedResponse,
+  PublicProfile,
   StoryLibraryItem,
   UserProfile,
   UserStats,
@@ -49,7 +50,7 @@ export const usersApi = {
       .then((r) => r.data),
 
   getPublicProfile: (userId: string) =>
-    api.get<Wrapped<UserProfile>>(`/users/${userId}/public-profile`).then((r) => r.data),
+    api.get<Wrapped<PublicProfile>>(`/users/${userId}/public-profile`).then((r) => r.data),
 
   getPublicStories: (userId: string, query: LibraryQuery = {}) =>
     api

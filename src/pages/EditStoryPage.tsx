@@ -18,16 +18,19 @@ import { ErrorState } from "../components/ui/States";
 import { getErrorMessage } from "../api/axios";
 import { useAuth } from "../hooks/useAuth";
 import { useLanguage } from "../i18n";
-import { isCustomCivilization } from "../constants/civilizations";
 import {
   useStoryCivilizations,
   useStoryEras,
   useStoryGenres,
   useCatalogs,
 } from "../hooks/useStoryOptions";
-import { humanize, isCatalogId, resolveCatalogEntry } from "../lib/storyCatalog";
+import {
+  humanize,
+  isCatalogId,
+  resolveCatalogEntry,
+  resolveCivilizationValue,
+} from "../lib/storyCatalog";
 import type {
-  StoryCivilization,
   StoryEra,
   StoryTheme,
   StoryType,
@@ -79,7 +82,6 @@ interface EditForm {
   year: string;
   location: string;
   civilization: string;
-  customCivilization: string;
   theme: StoryTheme;
   customTheme: string;
   visibility: StoryVisibility;
@@ -94,7 +96,10 @@ export function EditStoryPage() {
   const queryClient = useQueryClient();
 
   const query = useStoryQuery(storyId);
-  const pagesQuery = useQuery({ queryKey: ["story-pages", storyId], queryFn: () => storiesApi.getPages(storyId) });
+  const pagesQuery = useQuery({
+    queryKey: ["story-pages", storyId],
+    queryFn: () => storiesApi.getPages(storyId),
+  });
   const [appendText, setAppendText] = useState("");
   const [appendFile, setAppendFile] = useState<File | null>(null);
 
@@ -135,7 +140,6 @@ export function EditStoryPage() {
       year: "",
       location: "",
       civilization: "UNSPECIFIED",
-      customCivilization: "",
       theme: "UNSPECIFIED",
       customTheme: "",
       visibility: "PRIVATE",
@@ -152,7 +156,6 @@ export function EditStoryPage() {
   } = form;
   const genreId = watch("genreId");
   const eraId = watch("eraId");
-  const civilization = watch("civilization");
   const theme = watch("theme");
   const [saving, setSaving] = useState(false);
   const [discardOpen, setDiscardOpen] = useState(false);
@@ -176,8 +179,10 @@ export function EditStoryPage() {
         year: query.data.year != null ? String(query.data.year) : "",
         location: query.data.location ?? "",
         civilization:
-          query.data.civilizationId ?? query.data.civilization ?? "UNSPECIFIED",
-        customCivilization: query.data.customCivilization ?? "",
+          query.data.civilizationId ??
+          query.data.customCivilization ??
+          query.data.civilization ??
+          "UNSPECIFIED",
         theme: query.data.theme ?? "UNSPECIFIED",
         customTheme: query.data.customTheme ?? "",
         visibility: query.data.visibility ?? "PRIVATE",
@@ -186,11 +191,21 @@ export function EditStoryPage() {
   }, [query.data, reset]);
 
   useEffect(() => {
-    if (pagesQuery.data) setPageDrafts(Object.fromEntries(pagesQuery.data.map((page) => [page.id, page.content])));
+    if (pagesQuery.data)
+      setPageDrafts(
+        Object.fromEntries(
+          pagesQuery.data.map((page) => [page.id, page.content]),
+        ),
+      );
   }, [pagesQuery.data]);
 
-  const refreshPages = () => void queryClient.invalidateQueries({ queryKey: ["story-pages", storyId] });
-  const savePage = async (pageId: string) => { await storiesApi.updatePage(storyId, pageId, pageDrafts[pageId] ?? ""); refreshPages(); toast.success(t.common.save); };
+  const refreshPages = () =>
+    void queryClient.invalidateQueries({ queryKey: ["story-pages", storyId] });
+  const savePage = async (pageId: string) => {
+    await storiesApi.updatePage(storyId, pageId, pageDrafts[pageId] ?? "");
+    refreshPages();
+    toast.success(t.common.save);
+  };
   const movePage = async (pageId: string, direction: -1 | 1) => {
     const pages = pagesQuery.data ?? [];
     const index = pages.findIndex((page) => page.id === pageId);
@@ -213,10 +228,19 @@ export function EditStoryPage() {
   const onSubmit = handleSubmit(async (values) => {
     setSaving(true);
     try {
-      const genre = resolveCatalogEntry(values.genreId, catalogs.genres, legacyGenreOptions);
-      const era = resolveCatalogEntry(values.eraId, catalogs.eras, legacyEraOptions);
-      const civilizationOption = catalogs.civilizations.find(
-        (c) => c.value === values.civilization || c.legacyValue === values.civilization,
+      const genre = resolveCatalogEntry(
+        values.genreId,
+        catalogs.genres,
+        legacyGenreOptions,
+      );
+      const era = resolveCatalogEntry(
+        values.eraId,
+        catalogs.eras,
+        legacyEraOptions,
+      );
+      const civPayload = resolveCivilizationValue(
+        values.civilization,
+        catalogs.civilizations,
       );
       const updated = await storiesApi.update(storyId, {
         title: values.title,
@@ -229,19 +253,11 @@ export function EditStoryPage() {
         language: values.language || undefined,
         year: values.year ? Number(values.year) : undefined,
         location: values.location || undefined,
-        civilization:
-          values.civilization === "UNSPECIFIED" || isCatalogId(values.civilization)
-            ? undefined
-            : (values.civilization as StoryCivilization),
-        customCivilization:
-          isCustomCivilization(values.civilization)
-            ? values.customCivilization
-            : undefined,
+        civilization: civPayload.civilization,
+        customCivilization: civPayload.customCivilization,
         theme: values.theme === "UNSPECIFIED" ? undefined : values.theme,
         customTheme: values.theme === "CUSTOM" ? values.customTheme : undefined,
-        civilizationId: isCatalogId(civilizationOption?.value)
-          ? civilizationOption?.value
-          : undefined,
+        civilizationId: civPayload.civilizationId,
         visibility: values.visibility,
       });
 
@@ -359,23 +375,64 @@ export function EditStoryPage() {
                 />
               </div>
               <p className="text-sm text-fg-muted">
-                Story language is for reading and narration. It does not control the image style, culture, or setting.
+                Story language is for reading and narration. It does not control
+                the image style, culture, or setting.
               </p>
             </CardBody>
           </Card>
 
           <Card>
-            <CardHeader><h2 className="text-base font-bold text-fg">Story pages</h2></CardHeader>
+            <CardHeader>
+              <h2 className="text-base font-bold text-fg">Story pages</h2>
+            </CardHeader>
             <CardBody className="space-y-5 p-6">
               {pagesQuery.data?.map((page) => (
-                <div key={page.id} className="space-y-2 rounded-lg border border-border p-4">
+                <div
+                  key={page.id}
+                  className="space-y-2 rounded-lg border border-border p-4"
+                >
                   <div className="flex flex-wrap items-center justify-between gap-2 text-sm font-semibold text-fg-muted">
                     <span>Page {page.pageNumber}</span>
                     <div className="flex items-center gap-2">
-                      <Button type="button" variant="outline" size="sm" aria-label="Move page up" disabled={page.pageNumber === 1} onClick={() => void movePage(page.id, -1)}><ArrowUp className="size-4" /></Button>
-                      <Button type="button" variant="outline" size="sm" aria-label="Move page down" disabled={page.pageNumber === (pagesQuery.data?.length ?? 0)} onClick={() => void movePage(page.id, 1)}><ArrowDown className="size-4" /></Button>
-                      <Button type="button" variant="outline" size="sm" onClick={() => void savePage(page.id)}>Save page</Button>
-                      <Button type="button" variant="outline" size="sm" aria-label="Delete page" onClick={() => void removePage(page.id)}><Trash2 className="size-4 text-red-600" /></Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        aria-label="Move page up"
+                        disabled={page.pageNumber === 1}
+                        onClick={() => void movePage(page.id, -1)}
+                      >
+                        <ArrowUp className="size-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        aria-label="Move page down"
+                        disabled={
+                          page.pageNumber === (pagesQuery.data?.length ?? 0)
+                        }
+                        onClick={() => void movePage(page.id, 1)}
+                      >
+                        <ArrowDown className="size-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => void savePage(page.id)}
+                      >
+                        Save page
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        aria-label="Delete page"
+                        onClick={() => void removePage(page.id)}
+                      >
+                        <Trash2 className="size-4 text-red-600" />
+                      </Button>
                     </div>
                   </div>
                   <Textarea
@@ -393,7 +450,11 @@ export function EditStoryPage() {
                     {(pageDrafts[page.id] ?? page.content).length}/
                     {MAX_PAGE_CHARACTERS}
                   </p>
-                  {page.imageStatus === "PENDING" && <p className="text-xs text-fg-muted">Illustration needs regeneration after this edit.</p>}
+                  {page.imageStatus === "PENDING" && (
+                    <p className="text-xs text-fg-muted">
+                      Illustration needs regeneration after this edit.
+                    </p>
+                  )}
                 </div>
               ))}
               <Textarea
@@ -475,12 +536,6 @@ export function EditStoryPage() {
                   searchPlaceholder={t.create.civilizationSearch}
                   options={catalogs.civilizations}
                 />
-                {isCustomCivilization(civilization) && (
-                  <Input
-                    label={t.create.customCivilization}
-                    {...register("customCivilization")}
-                  />
-                )}
                 <Select
                   label={t.create.theme}
                   value={watch("theme")}
@@ -502,7 +557,8 @@ export function EditStoryPage() {
                 )}
               </div>
               <p className="mt-4 text-sm text-fg-muted">
-                Use the story text for the scene. Era, location, civilization, and theme only shape the visual world around it.
+                Use the story text for the scene. Era, location, civilization,
+                and theme only shape the visual world around it.
               </p>
             </CardBody>
           </Card>
@@ -514,21 +570,23 @@ export function EditStoryPage() {
               </h2>
             </CardHeader>
             <CardBody>
-              <div className="grid grid-cols-3 gap-3">
-                {(["PRIVATE", "PUBLIC", "SHARED"] as const).map((v) => (
-                  <button
-                    key={v}
-                    type="button"
-                    onClick={() => setValue("visibility", v)}
-                    className={
-                      watch("visibility") === v
-                        ? "rounded-lg border border-brand-500 bg-brand-500/10 p-3 text-sm font-semibold text-brand-600 dark:text-brand-400"
-                        : "rounded-lg border border-border bg-surface p-3 text-sm font-semibold text-fg-muted transition-colors hover:border-brand-500/40"
-                    }
-                  >
-                    {t.status[v]}
-                  </button>
-                ))}
+              <div className="grid grid-cols-2 gap-3">
+                {(["PRIVATE", "PUBLIC", "MEMBERS", "SHARED"] as const).map(
+                  (v) => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => setValue("visibility", v)}
+                      className={
+                        watch("visibility") === v
+                          ? "rounded-lg border border-brand-500 bg-brand-500/10 p-3 text-sm font-semibold text-brand-600 dark:text-brand-400"
+                          : "rounded-lg border border-border bg-surface p-3 text-sm font-semibold text-fg-muted transition-colors hover:border-brand-500/40"
+                      }
+                    >
+                      {t.status[v]}
+                    </button>
+                  ),
+                )}
               </div>
             </CardBody>
           </Card>

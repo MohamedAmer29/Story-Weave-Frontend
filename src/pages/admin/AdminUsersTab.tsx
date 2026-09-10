@@ -276,7 +276,7 @@ function UserDetailModal({
 
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div className="rounded-lg bg-surface-2 p-3">
-              <p className="text-fg-faint">{t.auth.createdAt}</p>
+              <p className="text-fg-faint">{t.admin.createdAt}</p>
               <p className="font-medium text-fg">
                 {new Date(user.createdAt).toLocaleDateString()}
               </p>

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { gsap, prefersReducedMotion } from "../../lib/gsap";
+import { gsap } from "../../lib/gsap";
 
 const INTERACTIVE_SELECTOR =
   "a, button, input, textarea, select, [role='button'], [data-cursor-interactive='true'], .story-card, .interactive-card, [contenteditable='true']";
@@ -16,7 +16,7 @@ const CursorFollower = () => {
       typeof window !== "undefined" &&
       window.matchMedia("(pointer: coarse)").matches;
 
-    if (prefersReducedMotion() || isTouchOrCoarse) {
+    if (isTouchOrCoarse) {
       cursor.style.display = "none";
       return;
     }

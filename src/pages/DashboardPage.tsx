@@ -2,16 +2,22 @@ import { Helmet } from "react-helmet-async";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import {
+  Bell,
   BookOpen,
   CheckCircle2,
   Clock,
   FileX,
   Globe,
+  Heart,
   Lock,
   Share2,
   Plus,
 } from "lucide-react";
 import { dashboardApi } from "../api/dashboardApi";
+import { favouritesApi } from "../api/favouritesApi";
+import { usersApi } from "../api/usersApi";
+import { useFavouritesIds } from "../hooks/useFavourites";
+import { useUnreadCount } from "../hooks/useNotifications";
 import { Card, CardBody } from "../components/ui/Card";
 import { StoryCard } from "../components/home/StoryCard";
 import { PageLoader } from "../components/ui/Skeleton";
@@ -60,6 +66,22 @@ export function DashboardPage() {
   const navigate = useNavigate();
 
   const { status, user } = useAuth();
+  const canAuthor = user?.role === "AUTHOR" || user?.role === "ADMIN";
+
+  const { data: unreadCountData } = useUnreadCount();
+  const { favIds } = useFavouritesIds(status === "authenticated");
+
+  const sharedQuery = useQuery({
+    queryKey: ["shared-with-me", user?.id],
+    queryFn: () => usersApi.sharedStories({ page: 1, limit: 1 }),
+    enabled: status === "authenticated" && !canAuthor,
+  });
+
+  const favStoriesQuery = useQuery({
+    queryKey: ["favourites-list", user?.id],
+    queryFn: () => favouritesApi.list({ page: 1, limit: 6 }),
+    enabled: status === "authenticated" && !canAuthor,
+  });
 
   const query = useQuery({
     queryKey: ["dashboard", user?.id],
@@ -100,100 +122,159 @@ export function DashboardPage() {
             </h1>
             <p className="mt-2 text-fg-muted">{t.dashboard.subtitle}</p>
           </div>
-          <Button onClick={() => navigate("/create")}>
-            <Plus className="size-4" aria-hidden />
-            {t.dashboard.createStory}
-          </Button>
+          {canAuthor && (
+            <Button onClick={() => navigate("/create")}>
+              <Plus className="size-4" aria-hidden />
+              {t.dashboard.createStory}
+            </Button>
+          )}
         </div>
 
-        <div className="mt-8 grid grid-cols-2 gap-4 md:grid-cols-4">
-          <StatTile
-            icon={BookOpen}
-            label={t.dashboard.totalStories}
-            value={data.stats.totalStories}
-          />
-          <StatTile
-            icon={Globe}
-            label={t.dashboard.publicStories}
-            value={data.stats.publicStories}
-          />
-          <StatTile
-            icon={Lock}
-            label={t.dashboard.privateStories}
-            value={data.stats.privateStories}
-          />
-          <StatTile
-            icon={Share2}
-            label={t.dashboard.sharedStories}
-            value={data.stats.sharedStories}
-          />
-          <StatTile
-            icon={Clock}
-            label={t.dashboard.processing}
-            value={data.stats.processingStories}
-            tone="warning"
-          />
-          <StatTile
-            icon={CheckCircle2}
-            label={t.dashboard.completed}
-            value={data.stats.completedStories}
-            tone="success"
-          />
-          <StatTile
-            icon={FileX}
-            label={t.dashboard.failed}
-            value={data.stats.failedStories}
-            tone="danger"
-          />
-          <Card className="p-5">
-            <div className="flex items-center gap-4">
-              <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400">
-                <BookOpen className="size-5.5" aria-hidden />
-              </span>
-              <div>
-                <p className="text-2xl font-bold text-fg">
-                  {data.stats.illustratedPages}
-                  <span className="text-sm font-normal text-fg-faint">
-                    {" "}
-                    / {data.stats.totalPages}
-                  </span>
-                </p>
-                <p className="truncate text-sm text-fg-muted">
-                  {t.dashboard.illustratedPages}
-                </p>
+        {canAuthor ? (
+          <div className="mt-8 grid grid-cols-2 gap-4 md:grid-cols-4">
+            <StatTile
+              icon={BookOpen}
+              label={t.dashboard.totalStories}
+              value={data.stats.totalStories}
+            />
+            <StatTile
+              icon={Globe}
+              label={t.dashboard.publicStories}
+              value={data.stats.publicStories}
+            />
+            <StatTile
+              icon={Lock}
+              label={t.dashboard.privateStories}
+              value={data.stats.privateStories}
+            />
+            <StatTile
+              icon={Share2}
+              label={t.dashboard.sharedStories}
+              value={data.stats.sharedStories}
+            />
+            <StatTile
+              icon={Clock}
+              label={t.dashboard.processing}
+              value={data.stats.processingStories}
+              tone="warning"
+            />
+            <StatTile
+              icon={CheckCircle2}
+              label={t.dashboard.completed}
+              value={data.stats.completedStories}
+              tone="success"
+            />
+            <StatTile
+              icon={FileX}
+              label={t.dashboard.failed}
+              value={data.stats.failedStories}
+              tone="danger"
+            />
+            <Card className="p-5">
+              <div className="flex items-center gap-4">
+                <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400">
+                  <BookOpen className="size-5.5" aria-hidden />
+                </span>
+                <div>
+                  <p className="text-2xl font-bold text-fg">
+                    {data.stats.illustratedPages}
+                    <span className="text-sm font-normal text-fg-faint">
+                      {" "}
+                      / {data.stats.totalPages}
+                    </span>
+                  </p>
+                  <p className="truncate text-sm text-fg-muted">
+                    {t.dashboard.illustratedPages}
+                  </p>
+                </div>
               </div>
-            </div>
-          </Card>
-        </div>
+            </Card>
+          </div>
+        ) : (
+          <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <StatTile
+              icon={Heart}
+              label={t.dashboard.favourites}
+              value={favIds.size}
+              tone="brand"
+            />
+            <StatTile
+              icon={Share2}
+              label={t.dashboard.sharedWithMe}
+              value={sharedQuery.data?.meta?.total ?? 0}
+              tone="brand"
+            />
+            <StatTile
+              icon={Bell}
+              label={t.dashboard.unread}
+              value={unreadCountData ?? 0}
+              tone="warning"
+            />
+          </div>
+        )}
 
         <div className="mt-10 grid grid-cols-1 gap-8 lg:grid-cols-3">
           <div className="lg:col-span-2 ">
-            <div className="mb-4  flex items-center justify-between">
-              <h2 className="text-lg font-bold text-fg">
-                {t.dashboard.recentStories}
-              </h2>
-              <Link
-                to="/library"
-                className="text-sm font-semibold text-brand-600 hover:underline dark:text-brand-400"
-              >
-                {t.dashboard.viewAll} →
-              </Link>
-            </div>
-            {data.recentStories.length === 0 ? (
-              <EmptyState
-                title={t.dashboard.noRecentStories}
-                action={
-                  <Button onClick={() => navigate("/create")}>
-                    {t.dashboard.createStory}
-                  </Button>
-                }
-              />
+            {canAuthor ? (
+              <>
+                <div className="mb-4  flex items-center justify-between">
+                  <h2 className="text-lg font-bold text-fg">
+                    {t.dashboard.recentStories}
+                  </h2>
+                  <Link
+                    to="/library"
+                    className="text-sm font-semibold text-brand-600 hover:underline dark:text-brand-400"
+                  >
+                    {t.dashboard.viewAll} →
+                  </Link>
+                </div>
+                {data.recentStories.length === 0 ? (
+                  <EmptyState
+                    title={t.dashboard.noRecentStories}
+                    action={
+                      <Button onClick={() => navigate("/create")}>
+                        {t.dashboard.createStory}
+                      </Button>
+                    }
+                  />
+                ) : (
+                  <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
+                    {data.recentStories.map((story) => (
+                      <StoryCard key={story.id} story={story} />
+                    ))}
+                  </div>
+                )}
+              </>
             ) : (
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
-                {data.recentStories.map((story) => (
-                  <StoryCard key={story.id} story={story} />
-                ))}
-              </div>
+              <>
+                <div className="mb-4 flex items-center justify-between">
+                  <h2 className="text-lg font-bold text-fg">
+                    {t.dashboard.yourFavourites}
+                  </h2>
+                  <Link
+                    to="/favourites"
+                    className="text-sm font-semibold text-brand-600 hover:underline dark:text-brand-400"
+                  >
+                    {t.dashboard.viewAll} →
+                  </Link>
+                </div>
+                {!favStoriesQuery.data || favStoriesQuery.data.data.length === 0 ? (
+                  <EmptyState
+                    title={t.dashboard.noFavourites}
+                    action={
+                      <Button onClick={() => navigate("/explore")}>
+                        {t.dashboard.exploreStories}
+                      </Button>
+                    }
+                  />
+                ) : (
+                  <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
+                    {favStoriesQuery.data.data.map((story) => (
+                      <StoryCard key={story.id} story={story} />
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </div>
 

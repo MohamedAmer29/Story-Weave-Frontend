@@ -3,6 +3,29 @@ export const en = {
     name: "StoryForge AI",
     tagline: "Turn your stories into worlds.",
   },
+  seo: {
+    defaultTitle: "StoryForge AI — AI-Powered Illustrated Storytelling",
+    defaultDescription:
+      "Create beautiful AI-illustrated stories, read community tales, and explore cinematic worlds brought to life with AI-generated artwork.",
+    homeTitle:
+      "AI Illustrated Stories — Create, Read & Explore with StoryForge AI",
+    homeDescription:
+      "Turn your written stories into illustrated worlds with AI. Create AI-illustrated stories, read community tales, and explore cinematic worlds brought to life with AI-generated artwork.",
+    homeKeywords: [
+      "AI illustrated stories",
+      "AI story generator",
+      "illustrated storytelling",
+      "AI-generated story illustrations",
+      "create illustrated stories",
+    ],
+    storySuffix: "AI Illustrated Stories",
+    storyFallbackDescription:
+      "An AI-illustrated story created and read on StoryForge AI.",
+    exploreDescription:
+      "Discover and read public AI-illustrated stories created by our community — from fantasy to history, each tale brought to life with AI-generated artwork.",
+    authorProfiles:
+      "{name} on StoryForge AI — public AI-illustrated stories.",
+  },
   nav: {
     home: "Home",
     explore: "Explore",
@@ -165,6 +188,40 @@ export const en = {
     createStory: "Create Story",
     rights: "All rights reserved.",
   },
+  static: {
+    aboutTitle: "About",
+    aboutIntro:
+      "StoryForge turns your words into illustrated worlds using AI — designed for storytellers, by storytellers.",
+    aboutMission: "Our mission",
+    aboutMissionBody:
+      "We believe everyone has a story worth telling. StoryForge helps you bring it to life with lush, AI-crafted illustrations without ever replacing your voice.",
+    aboutApproach: "Our approach",
+    aboutApproachBody:
+      "Your words are the heartbeat of every story. Our AI reads your text, respects your world, and adds vivid imagery — in Arabic and English — so you can focus on the writing.",
+    contactTitle: "Contact",
+    contactIntro: "We'd love to hear from you.",
+    contactEmailLabel: "Email us",
+    contactEmail: "m1o1h1a1a1@gmail.com",
+    contactResponse: "We usually reply within 48 hours.",
+    privacyTitle: "Privacy Policy",
+    privacyIntro:
+      "Your privacy matters. Here's a plain-language summary of how StoryForge handles your information.",
+    privacyData: "Data we collect",
+    privacyDataBody:
+      "We collect the account details you provide (name, email), your stories and their generated illustrations, and basic usage data needed to run the service securely.",
+    privacyRights: "Your rights",
+    privacyRightsBody:
+      "You can access, correct, or delete your data at any time from your profile and settings. You may also export or permanently remove your stories whenever you like.",
+    termsTitle: "Terms of Service",
+    termsIntro:
+      "By using StoryForge you agree to these terms. They keep the platform safe and fair for everyone.",
+    termsUse: "Using StoryForge",
+    termsUseBody:
+      "You're responsible for the stories you create and share. Please respect the rights of others and don't upload content you don't own.",
+    termsContent: "Your content",
+    termsContentBody:
+      "Your stories belong to you. We only use them to generate your requested illustrations and provide the service you asked for.",
+  },
   common: {
     loading: "Loading...",
     save: "Save",
@@ -225,6 +282,8 @@ export const en = {
     sentTo: "A verification code was sent to",
     bannerMessage: "Your email address is not verified yet.",
     verifyNow: "Verify Now",
+    verifyToContinue:
+      "Your email is not verified yet. Please verify it to continue using the app.",
     resendCooldown: "Resend in {seconds}s",
     maxResendsReached: "Max resends reached (3/3)",
     resendAttemptsLeft: "Resend code ({left} left)",
@@ -258,6 +317,13 @@ export const en = {
     viewAll: "View all",
     noRecentStories: "No stories yet. Create your first story to get started!",
     createStory: "Create Story",
+    favourites: "Favourites",
+    sharedWithMe: "Shared With Me",
+    unread: "Unread",
+    yourFavourites: "Your Favourites",
+    noFavourites:
+      "No favourites yet. Explore stories to find your next favourite!",
+    exploreStories: "Explore Stories",
   },
   library: {
     title: "My Stories",
@@ -298,6 +364,7 @@ export const en = {
     READY: "Ready",
     FAILED: "Failed",
     PUBLIC: "Public",
+    MEMBERS: "Members",
     PRIVATE: "Private",
     SHARED: "Shared",
     TEXT: "Text",
@@ -362,6 +429,7 @@ export const en = {
     visibilityLabel: "Visibility",
     private: "Private",
     public: "Public",
+    members: "Members",
     shared: "Shared",
     by: "by",
     noPages: "This story has no pages yet.",
@@ -377,7 +445,8 @@ export const en = {
     },
     generationProgress: "Illustration progress",
     illustrateRemaining: "Illustrate remaining",
-    illustrateRemainingStarted: "Remaining illustration generation has started.",
+    illustrateRemainingStarted:
+      "Remaining illustration generation has started.",
     allPagesIllustrated: "All pages are already illustrated.",
   },
   notifications: {
@@ -487,6 +556,7 @@ export const en = {
     userDetailSubtitle: "View user information and their stories.",
     publicProfile: "Public Profile",
     publicStories: "Public Stories",
+    createdAt: "Joined",
   },
   share: {
     title: "Share Story",
@@ -537,8 +607,10 @@ export const en = {
     updated: "Option updated.",
     deactivated: "Option deactivated.",
     activated: "Option activated.",
-    confirmDeactivate: "Deactivate this option? It will no longer appear when creating stories.",
-    confirmActivate: "Reactivate this option? It will be available again when creating stories.",
+    confirmDeactivate:
+      "Deactivate this option? It will no longer appear when creating stories.",
+    confirmActivate:
+      "Reactivate this option? It will be available again when creating stories.",
     nameRequired: "Display name is required.",
   },
   themeName: {

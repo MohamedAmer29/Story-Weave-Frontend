@@ -82,11 +82,19 @@ export function LoginPage() {
 
   const onSubmit = handleSubmit(async (values) => {
     try {
-      await login({
+      const res = await login({
         email: values.email,
         password: values.password,
         rememberMe: values.rememberMe,
       });
+      if (res.user?.emailVerified === false) {
+        toast.warning(t.verifyEmail.verifyToContinue);
+        navigate(
+          `/verify-email-otp?email=${encodeURIComponent(values.email)}`,
+          { replace: true },
+        );
+        return;
+      }
       toast.success(t.auth.loginSuccess);
       navigate(from, { replace: true });
     } catch (err) {

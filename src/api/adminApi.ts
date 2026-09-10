@@ -21,6 +21,40 @@ export interface AdminQuery {
   visibility?: string;
   sourceType?: string;
   userId?: string;
+  storyId?: string;
+  imageStatus?: string;
+}
+
+export interface FailedJob {
+  id: string;
+  name: string;
+  attemptsMade: number;
+  failedReason: string;
+  timestamp: string;
+  processedOn: string;
+  data: {
+    storyId: string;
+    storyPageId: string | null;
+    userId: string;
+  };
+}
+
+export interface GenerationPage {
+  pageId: string;
+  pageNumber: number;
+  imageStatus: string;
+  imageUrl: string | null;
+  imageError: string | null;
+  imageGeneratedAt: string | null;
+  updatedAt: string;
+  story: {
+    id: string;
+    title: string;
+  };
+  owner: {
+    id: string;
+    email: string;
+  };
 }
 
 export interface Paginated<T> {
@@ -141,7 +175,7 @@ export const adminApi = {
 
   queueFailures: (query: AdminQuery = {}) =>
     api
-      .get<{ success: boolean; data: unknown[]; meta: PaginationMeta }>(
+      .get<{ success: boolean; data: FailedJob[]; meta: PaginationMeta }>(
         "/admin/system/queue/failures",
         {
           params: query,
@@ -151,12 +185,13 @@ export const adminApi = {
 
   generations: (query: AdminQuery = {}) =>
     api
-      .get<{ success: boolean; data: unknown[]; meta: PaginationMeta }>(
-        "/admin/system/generations",
-        {
-          params: query,
-        },
-      )
+      .get<{
+        success: boolean;
+        data: GenerationPage[];
+        meta: PaginationMeta;
+      }>("/admin/system/generations", {
+        params: query,
+      })
       .then((r) => r.data),
 
   audit: (query: AdminQuery = {}) =>

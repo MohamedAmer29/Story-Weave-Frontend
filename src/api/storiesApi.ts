@@ -55,7 +55,7 @@ export const storiesApi = {
       .then((r) => r.data),
 
   searchPublic: (query: {
-    q: string;
+    search: string;
     page?: number;
     limit?: number;
     sort?: "latest" | "oldest" | "updated";

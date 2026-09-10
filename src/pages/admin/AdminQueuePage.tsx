@@ -12,7 +12,7 @@ import {
   ArcElement,
 } from "chart.js";
 import { Bar, Doughnut } from "react-chartjs-2";
-import { adminApi } from "../../api/adminApi";
+import { adminApi, type FailedJob, type GenerationPage } from "../../api/adminApi";
 import { Card, CardBody, CardHeader } from "../../components/ui/Card";
 import { Badge } from "../../components/ui/Badge";
 import { Skeleton } from "../../components/ui/Skeleton";
@@ -26,7 +26,6 @@ import { TabsProvider } from "../../components/ui/Tabs";
 import { Input, Select } from "../../components/ui/field";
 import { Pagination } from "../../components/ui/Pagination";
 import { useLanguage } from "../../i18n";
-import { cn } from "../../lib/cn";
 
 ChartJS.register(
   CategoryScale,
@@ -38,43 +37,11 @@ ChartJS.register(
   ArcElement,
 );
 
-interface FailedJob {
-  id: string;
-  name: string;
-  attemptsMade: number;
-  failedReason: string;
-  timestamp: string;
-  processedOn: string;
-  data: {
-    storyId: string;
-    storyPageId: string | null;
-    userId: string;
-  };
-}
-
-interface GenerationPage {
-  pageId: string;
-  pageNumber: number;
-  imageStatus: string;
-  imageUrl: string | null;
-  imageError: string | null;
-  imageGeneratedAt: string | null;
-  updatedAt: string;
-  story: {
-    id: string;
-    title: string;
-  };
-  owner: {
-    id: string;
-    email: string;
-  };
-}
+type QueueTab = "overview" | "failures" | "generations";
 
 export function AdminQueuePage() {
   const { t } = useLanguage();
-  const [activeTab, setActiveTab] = useState<
-    "overview" | "failures" | "generations"
-  >("overview");
+  const [activeTab, setActiveTab] = useState<QueueTab>("overview");
 
   const [failurePage, setFailurePage] = useState(1);
   const [generationPage, setGenerationPage] = useState(1);
@@ -104,6 +71,7 @@ export function AdminQueuePage() {
     delayed: 0,
     failed: 0,
     completed: 0,
+    total: 0,
   };
 
   const barChartData = {
@@ -192,7 +160,10 @@ export function AdminQueuePage() {
           {t.admin.queuePageTitle} · {t.brand.name}
         </title>
       </Helmet>
-      <TabsProvider value={activeTab} onValueChange={setActiveTab}>
+      <TabsProvider
+        value={activeTab}
+        onValueChange={(tab) => setActiveTab(tab as QueueTab)}
+      >
         <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
           <div className="mb-8">
             <h1 className="font-display text-3xl font-bold text-fg sm:text-4xl">
@@ -201,7 +172,10 @@ export function AdminQueuePage() {
             <p className="mt-2 text-fg-muted">{t.admin.queuePageSubtitle}</p>
           </div>
 
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <Tabs
+            value={activeTab}
+            onValueChange={(tab) => setActiveTab(tab as QueueTab)}
+          >
             <TabsList className="mb-6">
               <TabsTrigger value="overview">{t.admin.queueTitle}</TabsTrigger>
               <TabsTrigger value="failures">{t.admin.failedTitle}</TabsTrigger>
@@ -417,7 +391,7 @@ export function AdminQueuePage() {
                       }}
                       className="w-44"
                     >
-                      <option value="">{t.status.all}</option>
+                      <option value="">{t.common.all}</option>
                       <option value="COMPLETED">COMPLETED</option>
                       <option value="FAILED">FAILED</option>
                       <option value="GENERATING">GENERATING</option>

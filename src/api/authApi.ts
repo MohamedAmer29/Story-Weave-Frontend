@@ -4,6 +4,7 @@ import type { UserProfile } from "./types";
 export interface LoginResponse {
   user: UserProfile;
   accessToken: string;
+  sessionExpiresAt?: number;
 }
 
 export interface RegisterPayload {
@@ -28,6 +29,7 @@ export interface VerifyEmailResponse {
   message: string;
   user: UserProfile;
   accessToken: string;
+  sessionExpiresAt?: number;
 }
 
 export const authApi = {
@@ -40,7 +42,9 @@ export const authApi = {
   me: () => api.get<UserProfile>("/auth/me").then((r) => r.data),
 
   refreshToken: () =>
-    api.post<{ accessToken: string }>("/auth/refresh-token").then((r) => r.data),
+    api
+      .post<{ accessToken: string; sessionExpiresAt?: number }>("/auth/refresh-token")
+      .then((r) => r.data),
 
   logout: () => api.post<MessageResponse>("/auth/logout").then((r) => r.data),
 

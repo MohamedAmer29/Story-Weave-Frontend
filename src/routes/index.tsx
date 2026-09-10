@@ -3,8 +3,10 @@ import { RootLayout } from "../layouts/RootLayout";
 import { AdminLayout } from "../layouts/AdminLayout";
 import {
   AdminRoute,
+  AuthorRoute,
   GuestRoute,
   ProtectedRoute,
+  VerifyRoute,
 } from "../components/layout/guards";
 import { HomePage } from "../pages/HomePage";
 import { ExplorePage } from "../pages/ExplorePage";
@@ -36,6 +38,10 @@ import { AdminQueuePage } from "../pages/admin/AdminQueuePage";
 import { AdminAuditPage } from "../pages/admin/AdminAuditPage";
 import { NotFoundPage } from "../pages/errors/NotFoundPage";
 import { AuthorProfilePage } from "../pages/AuthorProfilePage";
+import { AboutPage } from "../pages/static/AboutPage";
+import { ContactPage } from "../pages/static/ContactPage";
+import { PrivacyPage } from "../pages/static/PrivacyPage";
+import { TermsPage } from "../pages/static/TermsPage";
 
 export function AppRoutes() {
   return (
@@ -50,7 +56,14 @@ export function AppRoutes() {
           }
         />
         <Route path="/explore" element={<ExplorePage />} />
-        <Route path="/how-it-works" element={<HowItWorksPage />} />
+        <Route
+          path="/how-it-works"
+          element={
+            <GuestRoute>
+              <HowItWorksPage />
+            </GuestRoute>
+          }
+        />
         <Route
           path="/login"
           element={
@@ -67,8 +80,22 @@ export function AppRoutes() {
             </GuestRoute>
           }
         />
-        <Route path="/verify-email" element={<SendVerifyEmailPage />} />
-        <Route path="/verify-email-otp" element={<VerifyEmailOtpPage />} />
+        <Route
+          path="/verify-email"
+          element={
+            <VerifyRoute>
+              <SendVerifyEmailPage />
+            </VerifyRoute>
+          }
+        />
+        <Route
+          path="/verify-email-otp"
+          element={
+            <VerifyRoute>
+              <VerifyEmailOtpPage />
+            </VerifyRoute>
+          }
+        />
         <Route
           path="/forgot-password"
           element={
@@ -95,6 +122,10 @@ export function AppRoutes() {
         />
         <Route path="/stories/:id" element={<StoryReaderPage />} />
         <Route path="/author/:userId" element={<AuthorProfilePage />} />
+        <Route path="/about" element={<AboutPage />} />
+        <Route path="/contact" element={<ContactPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
+        <Route path="/terms" element={<TermsPage />} />
 
         <Route
           path="/dashboard"
@@ -107,9 +138,9 @@ export function AppRoutes() {
         <Route
           path="/library"
           element={
-            <ProtectedRoute>
+            <AuthorRoute>
               <LibraryPage />
-            </ProtectedRoute>
+            </AuthorRoute>
           }
         />
         <Route
@@ -123,17 +154,17 @@ export function AppRoutes() {
         <Route
           path="/create"
           element={
-            <ProtectedRoute>
+            <AuthorRoute>
               <CreateStoryPage />
-            </ProtectedRoute>
+            </AuthorRoute>
           }
         />
         <Route
           path="/stories/:id/edit"
           element={
-            <ProtectedRoute>
+            <AuthorRoute>
               <EditStoryPage />
-            </ProtectedRoute>
+            </AuthorRoute>
           }
         />
         <Route
@@ -163,9 +194,9 @@ export function AppRoutes() {
         <Route
           path="/story-options"
           element={
-            <ProtectedRoute>
+            <AuthorRoute>
               <StoryOptionsPage />
-            </ProtectedRoute>
+            </AuthorRoute>
           }
         />
 
@@ -181,18 +212,9 @@ export function AppRoutes() {
             path="/admin/notifications"
             element={<AdminNotificationsPage />}
           />
-          <Route
-            path="/admin/health"
-            element={<AdminHealthPage />}
-          />
-          <Route
-            path="/admin/queue"
-            element={<AdminQueuePage />}
-          />
-          <Route
-            path="/admin/audit"
-            element={<AdminAuditPage />}
-          />
+          <Route path="/admin/health" element={<AdminHealthPage />} />
+          <Route path="/admin/queue" element={<AdminQueuePage />} />
+          <Route path="/admin/audit" element={<AdminAuditPage />} />
         </Route>
 
         <Route path="*" element={<NotFoundPage />} />

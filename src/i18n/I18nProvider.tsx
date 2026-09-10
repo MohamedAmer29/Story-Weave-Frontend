@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react
 import { en, type Translation } from "./en";
 import { ar } from "./ar";
 import { I18nContext, STORAGE_KEY, type I18nContextValue, type Language } from "./context";
+import { setActiveLanguage } from "./translations";
 
 const dictionaries: Record<Language, Translation> = { en, ar };
 
@@ -31,6 +32,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     document.documentElement.setAttribute("lang", lang === "ar" ? "ar" : "en");
     document.documentElement.setAttribute("dir", dir);
+    setActiveLanguage(lang);
   }, [lang, dir]);
 
   const setLanguage = useCallback((next: Language) => {

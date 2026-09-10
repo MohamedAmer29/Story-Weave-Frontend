@@ -1,48 +1,63 @@
 import { useCallback, useEffect } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   authApi,
   type LoginPayload,
   type RegisterPayload,
 } from "../api/authApi";
 import { usersApi } from "../api/usersApi";
-import { useAppDispatch, useAppSelector } from "../store";
 import {
+  AUTH_QUERY_KEY,
   clearCredentials,
+  readAuth,
   setCredentials,
   setStatus,
   setUser,
   updateLocalUser,
+  type AuthState,
   type AuthenticatedUser,
-} from "../store/authSlice";
+} from "../lib/authStore";
 
-import { requestRefresh } from "../api/axios";
+import { requestRefresh, blockSessionRefresh, unblockSessionRefresh } from "../api/axios";
 import { queryClient } from "../lib/queryClient";
+import { persistSessionExpiry, readSessionExpiry } from "../lib/session";
+
+function useAuthSnapshot(): AuthState {
+  const { data } = useQuery({
+    queryKey: AUTH_QUERY_KEY,
+    queryFn: () => readAuth(),
+    staleTime: Infinity,
+    gcTime: Infinity,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+  return data ?? readAuth();
+}
 
 export function useAuth() {
-  const dispatch = useAppDispatch();
-  const { token, user, status } = useAppSelector((state) => state.auth);
+  const { token, user, status } = useAuthSnapshot();
 
-  const hydrateUser = useCallback(
-    async (authUser: AuthenticatedUser) => {
-      try {
-        const profile = await usersApi.me();
-        dispatch(
-          setUser({
-            ...authUser,
-            avatarUrl: profile.data.avatarUrl,
-          }),
-        );
-      } catch {
-        dispatch(setUser(authUser));
-      }
-    },
-    [dispatch],
-  );
+  const hydrateUser = useCallback(async (authUser: AuthenticatedUser) => {
+    try {
+      const profile = await usersApi.me();
+      setUser({
+        ...authUser,
+        avatarUrl: profile.data.avatarUrl,
+      });
+    } catch {
+      setUser(authUser);
+    }
+  }, []);
+
+  const clearSession = useCallback(() => {
+    persistSessionExpiry(null);
+    clearCredentials();
+  }, []);
 
   useEffect(() => {
     if (!user && status === "idle") {
-      dispatch(setStatus("loading"));
+      setStatus("loading");
       if (token) {
         authApi
           .me()
@@ -54,43 +69,42 @@ export function useAuth() {
                   authApi
                     .me()
                     .then((u) => hydrateUser(u as AuthenticatedUser))
-                    .catch(() => dispatch(clearCredentials()));
+                    .catch(() => clearSession());
                 } else {
-                  dispatch(clearCredentials());
+                  clearSession();
                 }
               })
-              .catch(() => dispatch(clearCredentials()));
+              .catch(() => clearSession());
           });
-      } else {
+      } else if (readSessionExpiry() != null) {
         requestRefresh()
           .then((newToken) => {
             if (newToken) {
               authApi
                 .me()
                 .then((u) => hydrateUser(u as AuthenticatedUser))
-                .catch(() => dispatch(clearCredentials()));
+                .catch(() => clearSession());
             } else {
-              dispatch(clearCredentials());
+              clearSession();
             }
           })
-          .catch(() => dispatch(clearCredentials()));
+          .catch(() => clearSession());
+      } else {
+        clearSession();
       }
     }
-  }, [token, user, status, dispatch, hydrateUser]);
+  }, [token, user, status, hydrateUser, clearSession]);
 
   const loginMutation = useMutation({
     mutationFn: (payload: LoginPayload) => authApi.login(payload),
     onSuccess: (res) => {
-      dispatch(
-        setCredentials({
-          token: res.accessToken,
-          user: res.user as AuthenticatedUser,
-        }),
-      );
+      unblockSessionRefresh();
+      persistSessionExpiry(res.sessionExpiresAt);
+      setCredentials(res.accessToken, res.user as AuthenticatedUser);
       usersApi
         .me()
         .then((userData) => {
-          dispatch(updateLocalUser({ avatarUrl: userData.data.avatarUrl }));
+          updateLocalUser({ avatarUrl: userData.data.avatarUrl });
         })
         .catch(() => {});
     },
@@ -98,18 +112,26 @@ export function useAuth() {
 
   const registerMutation = useMutation({
     mutationFn: (payload: RegisterPayload) => authApi.register(payload),
-    // Do not dispatch setCredentials on registration so user is routed to OTP verification first
+    // Do not set credentials on registration so user is routed to OTP verification first
   });
 
   const logout = useCallback(async () => {
+    // Block background refreshes first so a logged-out session can never be
+    // resurrected by an in-flight request/refresh resolving after this.
+    blockSessionRefresh();
     try {
       await authApi.logout();
     } catch {
       // ignore server errors on logout
     }
-    dispatch(clearCredentials());
-    queryClient.clear();
-  }, [dispatch]);
+    clearSession();
+    // Wipe all cached data for the next session, but keep the auth cache entry
+    // so its unauthenticated state is not evicted into "idle".
+    queryClient.removeQueries({
+      predicate: (query) => query.queryKey[0] !== AUTH_QUERY_KEY[0],
+    });
+    queryClient.getMutationCache().clear();
+  }, [clearSession]);
 
   return {
     token,
@@ -128,10 +150,11 @@ export function useAuth() {
 }
 
 export function useIsAdmin() {
-  const user = useAppSelector((state) => state.auth.user);
+  const { user } = useAuthSnapshot();
   return user?.role === "ADMIN";
 }
 
 export function useIsAuthenticated() {
-  return useAppSelector((state) => state.auth.status === "authenticated");
+  const { status } = useAuthSnapshot();
+  return status === "authenticated";
 }

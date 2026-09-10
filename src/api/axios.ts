@@ -1,8 +1,14 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios";
+import { toast } from "react-toastify";
 import { API_URL } from "../config/env";
 import type { ApiError } from "./types";
-import { store } from "../store";
-import { clearCredentials, setToken } from "../store/authSlice";
+import {
+  clearCredentials,
+  readAuth,
+  setToken,
+} from "../lib/authStore";
+import { persistSessionExpiry, readSessionExpiry } from "../lib/session";
+import { getActiveTranslation } from "../i18n";
 
 interface RetriableRequestConfig extends InternalAxiosRequestConfig {
   headers: InternalAxiosRequestConfig["headers"] & { _retry?: boolean };
@@ -21,32 +27,62 @@ export const api = axios.create({
 });
 
 let refreshPromise: Promise<string | null> | null = null;
+let refreshAbortController: AbortController | null = null;
+
+let sessionRefreshBlocked = false;
+
+/** Prevent any background token refresh from resurrecting a session during/after an explicit logout. */
+export function blockSessionRefresh() {
+  sessionRefreshBlocked = true;
+  if (refreshAbortController) {
+    refreshAbortController.abort();
+    refreshAbortController = null;
+  }
+  refreshPromise = null;
+}
+
+/** Re-allow token refresh (called when a new login is established). */
+export function unblockSessionRefresh() {
+  sessionRefreshBlocked = false;
+}
 
 export async function requestRefresh(): Promise<string | null> {
+  if (sessionRefreshBlocked) return null;
+  // No stored session expiry means there is no active session to refresh.
+  const deadline = readSessionExpiry();
+  if (deadline == null) return null;
+  // The session has a hard absolute deadline. Never renew past it.
+  if (Date.now() >= deadline) return null;
   if (refreshPromise) return refreshPromise;
+  refreshAbortController = new AbortController();
   refreshPromise = (async () => {
     try {
       const res = await axios.post(
         `${API_URL}/auth/refresh-token`,
         {},
-        { withCredentials: true }
+        { withCredentials: true, signal: refreshAbortController.signal }
       );
       const token: string | null = res.data?.accessToken ?? null;
       if (token) {
-        store.dispatch(setToken(token));
+        setToken(token);
+        const sessionExpiresAt: unknown = res.data?.sessionExpiresAt;
+        if (typeof sessionExpiresAt === "number") {
+          persistSessionExpiry(sessionExpiresAt);
+        }
       }
       return token;
     } catch {
       return null;
     } finally {
       refreshPromise = null;
+      refreshAbortController = null;
     }
   })();
   return refreshPromise;
 }
 
 api.interceptors.request.use((config) => {
-  const token = store.getState().auth.token;
+  const { token } = readAuth();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -71,7 +107,7 @@ api.interceptors.response.use(
     // Sliding session: an expired access token, or an older-version token that
     // was superseded by a refresh, is not a real logout — refresh once and
     // replay the request with the new token.
-    if (hadToken && notYetRetried && authProblem) {
+    if (hadToken && notYetRetried && authProblem && !sessionRefreshBlocked) {
       original!.headers._retry = true;
       const token = await requestRefresh();
       if (token) {
@@ -82,11 +118,15 @@ api.interceptors.response.use(
 
     // Only a session that cannot be renewed (refresh token revoked/expired, or
     // a second rejection right after being reissued) ends the session.
+    // Skip during an explicit logout — logout handles its own cleanup.
     if (
-      errorCode === "ACCESS_TOKEN_INVALIDATED" ||
-      (status === 401 && original?.headers._retry)
+      !sessionRefreshBlocked &&
+      (errorCode === "ACCESS_TOKEN_INVALIDATED" ||
+        (status === 401 && original?.headers._retry))
     ) {
-      store.dispatch(clearCredentials());
+      persistSessionExpiry(null);
+      clearCredentials();
+      toast.warn(getActiveTranslation().session.expiredToast);
     }
     return Promise.reject(error);
   }
@@ -103,8 +143,11 @@ export function getErrorMessage(error: unknown): string | null {
 
   if (typeof data === "object" && data) {
     const message = data.message;
-    if (Array.isArray(message)) return message[0] ?? null;
+    if (message && Array.isArray(message)) return message[0] ?? null;
     if (typeof message === "string" && message.trim()) return message;
+    if (data.errorCode === "EMAIL_NOT_VERIFIED") {
+      return "Your email is not verified yet. Please verify your email to continue.";
+    }
   }
   if (error.code === "ERR_NETWORK") return "Network error. Check your connection.";
 

@@ -11,7 +11,11 @@ interface TabsProps {
 }
 
 export function Tabs({ value, onValueChange, children, className }: TabsProps) {
-  return <div className={cn("space-y-4", className)}>{children}</div>;
+  return (
+    <TabsContext.Provider value={{ value, onValueChange }}>
+      <div className={cn("space-y-4", className)}>{children}</div>
+    </TabsContext.Provider>
+  );
 }
 
 interface TabsListProps {

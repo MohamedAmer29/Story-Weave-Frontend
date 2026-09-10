@@ -1,7 +1,7 @@
 import type { StoryCivilization } from "../constants/civilizations";
 
 export type StoryStatus = "DRAFT" | "PROCESSING" | "READY" | "FAILED";
-export type StoryVisibility = "PUBLIC" | "PRIVATE" | "SHARED";
+export type StoryVisibility = "PUBLIC" | "MEMBERS" | "PRIVATE" | "SHARED";
 export type SourceType = "TEXT" | "PDF";
 export type StoryLanguage = "ARABIC" | "ENGLISH";
 
@@ -105,6 +105,7 @@ export interface ApiError {
   requestId?: string;
   timestamp?: string;
   path?: string;
+  errorCode?: string;
   message: string | string[];
 }
 
@@ -216,11 +217,7 @@ export interface StoryDetails {
   customCivilization: string | null;
   theme: StoryTheme | null;
   customTheme: string | null;
-  visualStyle?: string | null;
   author: { id: string; name: string; avatarUrl: string | null };
-  genreId?: string | null;
-  eraId?: string | null;
-  civilizationId?: string | null;
   stats: {
     totalPages: number;
     illustratedPages: number;
@@ -273,6 +270,15 @@ export interface UserProfile {
   emailVerified: boolean;
   avatarUrl: string | null;
   createdAt: string;
+}
+
+export interface PublicProfile {
+  id: string;
+  name: string;
+  avatarUrl: string | null;
+  stats: {
+    publicStories: number;
+  };
 }
 
 export interface NotificationItem {

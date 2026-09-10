@@ -1,13 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Clock, RefreshCw } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Clock } from "lucide-react";
 import { toast } from "react-toastify";
-import { authApi } from "../../api/authApi";
-import { requestRefresh } from "../../api/axios";
-import { useAppDispatch, useAppSelector } from "../../store";
-import { clearCredentials } from "../../store/authSlice";
 import { useLanguage } from "../../i18n";
-import { getErrorMessage } from "../../api/axios";
+import { useAuth } from "../../hooks/useAuth";
+import { readSessionExpiry } from "../../lib/session";
 
 const WARNING_THRESHOLD_MS = 3 * 60 * 1000; // 3 minutes warning
 
@@ -26,22 +23,23 @@ function getTokenExpiryMs(token: string): number | null {
 
 export function SessionExtensionBanner() {
   const { t } = useLanguage();
-  const dispatch = useAppDispatch();
-  const queryClient = useQueryClient();
-  const { user, token } = useAppSelector((state) => state.auth);
+  const navigate = useNavigate();
+  const { user, token } = useAuth();
+  const { logout } = useAuth();
 
   const [remainingMs, setRemainingMs] = useState<number | null>(null);
-  const autoExtendedRef = useRef(false);
+  const loggedOutRef = useRef(false);
 
-  const expiresAt = useMemo(
-    () => (token ? getTokenExpiryMs(token) : null),
-    [token]
-  );
+  const expiresAt = useMemo(() => {
+    const stored = readSessionExpiry();
+    if (stored != null) return stored;
+    return token ? getTokenExpiryMs(token) : null;
+  }, [token]);
 
   useEffect(() => {
-    autoExtendedRef.current = false;
+    loggedOutRef.current = false;
     if (!user || !token || !expiresAt) {
-      // Clear remaining countdown when logged out or when exp is unreadable.
+      // Clear remaining countdown when logged out or when the expiry is unknown.
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setRemainingMs(null);
       return;
@@ -54,48 +52,20 @@ export function SessionExtensionBanner() {
         return;
       }
 
-      // Access token expired — silently renew the session instead of logging
-      // the user out for not pressing "Extend".
+      // Hard timeout: the session cannot be renewed past this point, so log the
+      // user out instead of silently extending it.
       setRemainingMs(0);
-      if (!autoExtendedRef.current) {
-        autoExtendedRef.current = true;
-        void (async () => {
-          const newToken = await requestRefresh();
-          if (!newToken) {
-            void authApi.logout().catch(() => {});
-            dispatch(clearCredentials());
-            queryClient.clear();
-            toast.warn(t.session.expiredToast);
-          }
-        })();
+      if (!loggedOutRef.current) {
+        loggedOutRef.current = true;
+        toast.warn(t.session.expiredToast);
+        void logout().then(() => navigate("/login", { replace: true }));
       }
     };
 
     checkTime();
     const interval = setInterval(checkTime, 1000);
     return () => clearInterval(interval);
-  }, [user, token, expiresAt, dispatch, queryClient, t]);
-
-  const extendMutation = useMutation({
-    mutationFn: () => requestRefresh(),
-    onSuccess: (newToken) => {
-      if (!newToken) {
-        toast.error(t.common.error);
-        void authApi.logout().catch(() => {});
-        dispatch(clearCredentials());
-        queryClient.clear();
-        return;
-      }
-      void queryClient.invalidateQueries();
-      toast.success(t.session.extendedSuccess);
-    },
-    onError: (err) => {
-      toast.error(getErrorMessage(err) ?? t.common.error);
-      void authApi.logout().catch(() => {});
-      dispatch(clearCredentials());
-      queryClient.clear();
-    },
-  });
+  }, [user, token, expiresAt, logout, navigate, t]);
 
   if (
     remainingMs === null ||
@@ -122,21 +92,6 @@ export function SessionExtensionBanner() {
         />
         <span>{t.session.expiringDesc.replace("{time}", timeFormatted)}</span>
       </div>
-
-      <button
-        type="button"
-        onClick={() => extendMutation.mutate()}
-        disabled={extendMutation.isPending}
-        className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-amber-500/40 bg-amber-500/20 px-3.5 py-1.5 text-xs font-semibold text-amber-900 transition-colors hover:bg-amber-500/30 dark:text-amber-100 disabled:opacity-50"
-      >
-        <RefreshCw
-          className={`size-3.5 ${extendMutation.isPending ? "animate-spin" : ""}`}
-          aria-hidden
-        />
-        {extendMutation.isPending
-          ? t.session.extending
-          : t.session.extendAction}
-      </button>
     </div>
   );
 }

@@ -6,7 +6,6 @@ import { healthApi } from "../../api/healthApi";
 import { Card, CardBody, CardHeader } from "../../components/ui/Card";
 import { Badge } from "../../components/ui/Badge";
 import { Skeleton } from "../../components/ui/Skeleton";
-import { PageLoader } from "../../components/ui/Skeleton";
 import { useLanguage } from "../../i18n";
 import { cn } from "../../lib/cn";
 

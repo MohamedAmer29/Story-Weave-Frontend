@@ -5,7 +5,16 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { toast } from "react-toastify";
 import OtpInput from "react-otp-input";
-import { ArrowLeft, KeyRound, Mail, Lock, Eye, EyeOff } from "lucide-react";
+import {
+  ArrowLeft,
+  Check,
+  Eye,
+  EyeOff,
+  KeyRound,
+  Lock,
+  Mail,
+  ShieldCheck,
+} from "lucide-react";
 import { authApi } from "../../api/authApi";
 import { Card, CardBody, CardHeader } from "../../components/ui/Card";
 import { Input } from "../../components/ui/field";
@@ -13,6 +22,7 @@ import { Button } from "../../components/ui/Button";
 import { Logo } from "../../components/ui/Logo";
 import { getErrorMessage } from "../../api/axios";
 import { useLanguage } from "../../i18n";
+import { cn } from "../../lib/cn";
 
 // Page 1: Request Email Reset Code
 export function ForgotPasswordPage() {
@@ -22,7 +32,8 @@ export function ForgotPasswordPage() {
   const [email, setEmail] = useState(searchParams.get("email") || "");
 
   const forgotMutation = useMutation({
-    mutationFn: (userEmail: string) => authApi.forgotPassword({ email: userEmail }),
+    mutationFn: (userEmail: string) =>
+      authApi.forgotPassword({ email: userEmail }),
     onSuccess: () => {
       toast.success(t.forgotPassword.codeSent);
       navigate(`/forgot-password-otp?email=${encodeURIComponent(email)}`);
@@ -118,7 +129,8 @@ export function ForgotPasswordOtpPage() {
   }, [cooldown]);
 
   const forgotMutation = useMutation({
-    mutationFn: (userEmail: string) => authApi.forgotPassword({ email: userEmail }),
+    mutationFn: (userEmail: string) =>
+      authApi.forgotPassword({ email: userEmail }),
     onSuccess: () => {
       toast.success(t.forgotPassword.codeSent);
       setResendCount((c) => c + 1);
@@ -133,15 +145,21 @@ export function ForgotPasswordOtpPage() {
       toast.success(t.forgotPassword.otpVerified);
       navigate(
         `/reset-password?resetToken=${encodeURIComponent(
-          data.resetToken
-        )}&email=${encodeURIComponent(email)}`
+          data.resetToken,
+        )}&email=${encodeURIComponent(email)}`,
       );
     },
     onError: (err) => toast.error(getErrorMessage(err) ?? t.common.error),
   });
 
   const handleResend = () => {
-    if (cooldown > 0 || resendCount >= 3 || forgotMutation.isPending || !email.trim()) return;
+    if (
+      cooldown > 0 ||
+      resendCount >= 3 ||
+      forgotMutation.isPending ||
+      !email.trim()
+    )
+      return;
     forgotMutation.mutate(email);
   };
 
@@ -152,15 +170,25 @@ export function ForgotPasswordOtpPage() {
   };
 
   const maxResendsReached = resendCount >= 3;
-  const isResendDisabled = cooldown > 0 || maxResendsReached || forgotMutation.isPending || !email.trim();
+  const isResendDisabled =
+    cooldown > 0 ||
+    maxResendsReached ||
+    forgotMutation.isPending ||
+    !email.trim();
 
   let resendLabel = t.verifyEmail.resend;
   if (maxResendsReached) {
     resendLabel = t.verifyEmail.maxResendsReached;
   } else if (cooldown > 0) {
-    resendLabel = t.verifyEmail.resendCooldown.replace("{seconds}", String(cooldown));
+    resendLabel = t.verifyEmail.resendCooldown.replace(
+      "{seconds}",
+      String(cooldown),
+    );
   } else if (resendCount > 0) {
-    resendLabel = t.verifyEmail.resendAttemptsLeft.replace("{left}", String(3 - resendCount));
+    resendLabel = t.verifyEmail.resendAttemptsLeft.replace(
+      "{left}",
+      String(3 - resendCount),
+    );
   }
 
   return (
@@ -186,30 +214,30 @@ export function ForgotPasswordOtpPage() {
         </CardHeader>
         <CardBody>
           <form onSubmit={handleSubmit} className="space-y-5">
-              <div dir="ltr" className="flex justify-center my-2">
-                <OtpInput
-                  value={otp}
-                  onChange={(val: string) => setOtp(val.replace(/\D/g, ""))}
-                  numInputs={6}
-                  renderSeparator={<span className="w-1.5 sm:w-2" aria-hidden />}
-                  renderInput={(inputProps, index) => {
-                    const isFilled = Boolean(otp[index ?? 0]);
-                    return (
-                      <input
-                        {...inputProps}
-                        style={{ width: undefined }}
-                        className={`size-11 sm:size-12 rounded-xl border-2 text-center text-xl font-bold text-fg transition-all duration-150 outline-none ${
-                          isFilled
-                            ? "border-brand-500 bg-brand-500/10 shadow-sm dark:bg-brand-500/20"
-                            : "border-border bg-surface hover:border-fg-faint"
-                        } focus:border-brand-500 focus:bg-surface focus:ring-4 focus:ring-brand-500/20`}
-                      />
-                    );
-                  }}
-                  containerStyle="flex justify-center items-center gap-1 sm:gap-1.5"
-                  shouldAutoFocus
-                />
-              </div>
+            <div dir="ltr" className="flex justify-center my-2">
+              <OtpInput
+                value={otp}
+                onChange={(val: string) => setOtp(val.replace(/\D/g, ""))}
+                numInputs={6}
+                renderSeparator={<span className="w-1.5 sm:w-2" aria-hidden />}
+                renderInput={(inputProps, index) => {
+                  const isFilled = Boolean(otp[index ?? 0]);
+                  return (
+                    <input
+                      {...inputProps}
+                      style={{ width: undefined }}
+                      className={`size-11 sm:size-12 rounded-xl border-2 text-center text-xl font-bold text-fg transition-all duration-150 outline-none ${
+                        isFilled
+                          ? "border-brand-500 bg-brand-500/10 shadow-sm dark:bg-brand-500/20"
+                          : "border-border bg-surface hover:border-fg-faint"
+                      } focus:border-brand-500 focus:bg-surface focus:ring-4 focus:ring-brand-500/20`}
+                    />
+                  );
+                }}
+                containerStyle="flex justify-center items-center gap-1 sm:gap-1.5"
+                shouldAutoFocus
+              />
+            </div>
 
             <Button
               type="submit"
@@ -225,7 +253,11 @@ export function ForgotPasswordOtpPage() {
             <div className="flex items-center justify-between text-sm">
               <button
                 type="button"
-                onClick={() => navigate(`/forgot-password?email=${encodeURIComponent(email)}`)}
+                onClick={() =>
+                  navigate(
+                    `/forgot-password?email=${encodeURIComponent(email)}`,
+                  )
+                }
                 className="font-medium text-fg-muted hover:text-fg"
               >
                 {t.forgotPassword.changeEmail}
@@ -263,6 +295,7 @@ export function ResetPasswordPage() {
   const [searchParams] = useSearchParams();
   const resetToken = searchParams.get("resetToken") || "";
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   interface ResetPasswordForm {
     newPassword: string;
@@ -276,7 +309,35 @@ export function ResetPasswordPage() {
     formState: { errors },
   } = useForm<ResetPasswordForm>();
 
-  const newPassword = watch("newPassword");
+  const newPassword = watch("newPassword") || "";
+  const confirmPassword = watch("confirmPassword") || "";
+
+  // Password requirements calculation
+  const reqLength = newPassword.length >= 8;
+  const reqUpper = /[A-Z]/.test(newPassword);
+  const reqLower = /[a-z]/.test(newPassword);
+  const reqNumber = /\d/.test(newPassword);
+  const reqSpecial = /[!@#$%^&*]/.test(newPassword);
+
+  const reqMetCount = [
+    reqLength,
+    reqUpper && reqLower,
+    reqNumber,
+    reqSpecial,
+  ].filter(Boolean).length;
+
+  const getStrengthMeta = () => {
+    if (!newPassword) return { percent: 0, color: "bg-border", label: "" };
+    if (reqMetCount <= 1)
+      return { percent: 25, color: "bg-red-500", label: "Weak" };
+    if (reqMetCount === 2)
+      return { percent: 50, color: "bg-amber-500", label: "Fair" };
+    if (reqMetCount === 3)
+      return { percent: 75, color: "bg-blue-500", label: "Good" };
+    return { percent: 100, color: "bg-emerald-500", label: "Strong" };
+  };
+
+  const strengthMeta = getStrengthMeta();
 
   const resetPasswordMutation = useMutation({
     mutationFn: (values: ResetPasswordForm) =>
@@ -352,16 +413,184 @@ export function ResetPasswordPage() {
               </button>
             </div>
 
-            <Input
-              label={t.auth.confirmPassword}
-              type="password"
-              autoComplete="new-password"
-              error={errors.confirmPassword?.message}
-              {...register("confirmPassword", {
-                required: t.validation.required,
-                validate: (v) => v === newPassword || t.validation.confirmMismatch,
-              })}
-            />
+            {/* Password Strength Meter & Checklist */}
+            {newPassword ? (
+              <div className="space-y-2 rounded-xl bg-surface-2/30 p-3.5 border border-border/50 shadow-2xs mt-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-fg-muted font-semibold flex items-center gap-1.5">
+                    <ShieldCheck className="size-4 text-brand-500" />
+                    Password strength
+                  </span>
+                  <span
+                    className={cn(
+                      "font-bold",
+                      strengthMeta.label === "Weak" && "text-red-500",
+                      strengthMeta.label === "Fair" && "text-amber-500",
+                      strengthMeta.label === "Good" && "text-blue-500",
+                      strengthMeta.label === "Strong" && "text-emerald-500",
+                    )}
+                  >
+                    {strengthMeta.label}
+                  </span>
+                </div>
+
+                <div className="h-1.5 w-full rounded-full bg-surface-2 overflow-hidden flex gap-1 p-0.5">
+                  <div
+                    className={cn(
+                      "h-full flex-1 rounded-full transition-colors duration-150",
+                      strengthMeta.percent >= 25
+                        ? strengthMeta.color
+                        : "bg-border/60",
+                    )}
+                  />
+                  <div
+                    className={cn(
+                      "h-full flex-1 rounded-full transition-colors duration-150",
+                      strengthMeta.percent >= 50
+                        ? strengthMeta.color
+                        : "bg-border/60",
+                    )}
+                  />
+                  <div
+                    className={cn(
+                      "h-full flex-1 rounded-full transition-colors duration-150",
+                      strengthMeta.percent >= 75
+                        ? strengthMeta.color
+                        : "bg-border/60",
+                    )}
+                  />
+                  <div
+                    className={cn(
+                      "h-full flex-1 rounded-full transition-colors duration-150",
+                      strengthMeta.percent >= 100
+                        ? strengthMeta.color
+                        : "bg-border/60",
+                    )}
+                  />
+                </div>
+
+                {/* Requirements grid */}
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 pt-1 text-xs">
+                  <div
+                    className={cn(
+                      "flex items-center gap-1.5",
+                      reqLength
+                        ? "text-emerald-600 dark:text-emerald-400 font-semibold"
+                        : "text-fg-faint",
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        "size-3.5 rounded-full flex items-center justify-center text-[10px]",
+                        reqLength
+                          ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400"
+                          : "bg-surface-2 text-fg-faint",
+                      )}
+                    >
+                      <Check className="size-2.5 stroke-[3]" />
+                    </div>
+                    8+ characters
+                  </div>
+
+                  <div
+                    className={cn(
+                      "flex items-center gap-1.5",
+                      reqUpper && reqLower
+                        ? "text-emerald-600 dark:text-emerald-400 font-semibold"
+                        : "text-fg-faint",
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        "size-3.5 rounded-full flex items-center justify-center text-[10px]",
+                        reqUpper && reqLower
+                          ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400"
+                          : "bg-surface-2 text-fg-faint",
+                      )}
+                    >
+                      <Check className="size-2.5 stroke-[3]" />
+                    </div>
+                    Upper & lowercase
+                  </div>
+
+                  <div
+                    className={cn(
+                      "flex items-center gap-1.5",
+                      reqNumber
+                        ? "text-emerald-600 dark:text-emerald-400 font-semibold"
+                        : "text-fg-faint",
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        "size-3.5 rounded-full flex items-center justify-center text-[10px]",
+                        reqNumber
+                          ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400"
+                          : "bg-surface-2 text-fg-faint",
+                      )}
+                    >
+                      <Check className="size-2.5 stroke-[3]" />
+                    </div>
+                    One number
+                  </div>
+
+                  <div
+                    className={cn(
+                      "flex items-center gap-1.5",
+                      reqSpecial
+                        ? "text-emerald-600 dark:text-emerald-400 font-semibold"
+                        : "text-fg-faint",
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        "size-3.5 rounded-full flex items-center justify-center text-[10px]",
+                        reqSpecial
+                          ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400"
+                          : "bg-surface-2 text-fg-faint",
+                      )}
+                    >
+                      <Check className="size-2.5 stroke-[3]" />
+                    </div>
+                    Special symbol (!@#$)
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            <div className="relative">
+              <Input
+                label={t.auth.confirmPassword}
+                type={showConfirmPassword ? "text" : "password"}
+                autoComplete="new-password"
+                error={errors.confirmPassword?.message}
+                className="pe-11"
+                {...register("confirmPassword", {
+                  required: t.validation.required,
+                  validate: (v) =>
+                    v === newPassword || t.validation.confirmMismatch,
+                })}
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword((v) => !v)}
+                aria-label={
+                  showConfirmPassword ? t.common.close : t.common.search
+                }
+                className="absolute end-3 top-[2.79rem] -translate-y-1/2 text-fg-faint hover:text-fg"
+              >
+                {showConfirmPassword ? (
+                  <EyeOff className="size-4" />
+                ) : (
+                  <Eye className="size-4" />
+                )}
+              </button>
+              {confirmPassword && confirmPassword === newPassword && (
+                <span className="absolute end-11 top-[2.79rem] -translate-y-1/2 text-emerald-500">
+                  <Check className="size-4" />
+                </span>
+              )}
+            </div>
 
             <Button
               type="submit"

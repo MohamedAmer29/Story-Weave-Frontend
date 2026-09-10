@@ -79,7 +79,7 @@ export function Hero() {
         className="page-grain pointer-events-none absolute inset-0"
         aria-hidden
       />
-      <div className="relative mx-auto grid min-h-[calc(100svh-4.5rem)] max-w-7xl items-center gap-8 px-4 py-10 sm:gap-12 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:px-8 lg:py-16">
+      <div className="relative mx-auto grid min-h-[calc(100svh-4.5rem)] max-w-7xl items-center gap-10 px-4 py-8 sm:gap-12 sm:px-6 sm:py-12 lg:grid-cols-[1.05fr_0.95fr] lg:px-8 lg:py-16">
         <div className="mx-auto max-w-xl text-center sm:mx-0 sm:text-start">
           <div data-hero-intro>
             <Eyebrow>
@@ -92,7 +92,7 @@ export function Hero() {
 
           <h1
             data-hero-intro
-            className="mt-5 font-display text-[2.35rem] font-semibold leading-[0.94] text-display-tight text-fg sm:mt-6 sm:text-5xl sm:leading-[0.9] lg:text-[5rem]"
+            className="mt-5 font-display text-[2.35rem] font-semibold leading-[1.04] text-display-tight text-fg sm:mt-6 sm:text-5xl sm:leading-[0.9] lg:text-[5rem]"
           >
             <span className="block">{titleLead}</span>
             {titleAccent ? (
@@ -155,7 +155,7 @@ export function Hero() {
 
         <div
           ref={visualRef}
-          className="relative h-[16.5rem] sm:h-[26rem] lg:h-[34rem]"
+          className="relative h-[14rem] sm:h-[24rem] lg:h-[34rem]"
           key={isCompact ? "mobile" : "desktop"}
         >
           <div

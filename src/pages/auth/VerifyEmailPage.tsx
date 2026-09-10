@@ -13,8 +13,13 @@ import { Logo } from "../../components/ui/Logo";
 import { getErrorMessage } from "../../api/axios";
 import { useLanguage } from "../../i18n";
 import { useAuth } from "../../hooks/useAuth";
-import { useAppDispatch } from "../../store";
-import { setCredentials, updateLocalUser, type AuthenticatedUser } from "../../store/authSlice";
+import {
+  setCredentials,
+  updateLocalUser,
+  type AuthenticatedUser,
+} from "../../lib/authStore";
+import { persistSessionExpiry } from "../../lib/session";
+import { getVerifyCooldownState, markVerificationSent, clearVerifyCooldown } from "../../lib/verifyCooldown";
 
 export function SendVerifyEmailPage() {
   const { t } = useLanguage();
@@ -27,6 +32,7 @@ export function SendVerifyEmailPage() {
     mutationFn: () => authApi.resendVerification({ email: email.trim() }),
     onSuccess: () => {
       toast.success(t.verifyEmail.resendSuccess);
+      markVerificationSent(email.trim());
       navigate(`/verify-email-otp?email=${encodeURIComponent(email.trim())}`);
     },
     onError: (err) => toast.error(getErrorMessage(err) ?? t.common.error),
@@ -58,7 +64,7 @@ export function SendVerifyEmailPage() {
             </div>
           </div>
         </CardHeader>
-        <CardBody className="px-6 py-6 sm:px-8">
+        <CardBody className="px-4 py-6 sm:px-8">
           <form onSubmit={handleSubmit} className="space-y-5" noValidate>
             <div>
               <Input
@@ -95,43 +101,37 @@ export function SendVerifyEmailPage() {
 export function VerifyEmailOtpPage() {
   const { t } = useLanguage();
   const { user } = useAuth();
-  const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const [params] = useSearchParams();
   
-  const [email, setEmail] = useState(params.get("email") ?? user?.email ?? "");
+  const [email, setEmail] = useState(params.get("email") ?? "");
+  const effectiveEmail = email || user?.email || "";
   const [otp, setOtp] = useState("");
-  const [cooldown, setCooldown] = useState(60);
-  const [resendCount, setResendCount] = useState(0);
+  const cooldownState = getVerifyCooldownState(effectiveEmail);
+  const [cooldown, setCooldown] = useState(cooldownState.remainingSeconds);
+  const [resendCount, setResendCount] = useState(cooldownState.resendCount);
   const submittingRef = useRef(false);
 
   useEffect(() => {
-    if (!email && user?.email) {
-      setEmail(user.email);
+    if (cooldown <= 0) {
+      clearVerifyCooldown(effectiveEmail);
+      return;
     }
-  }, [user?.email, email]);
-
-  useEffect(() => {
-    if (cooldown <= 0) return;
     const timer = setInterval(() => {
       setCooldown((c) => Math.max(0, c - 1));
     }, 1000);
     return () => clearInterval(timer);
-  }, [cooldown]);
+  }, [cooldown, effectiveEmail]);
 
   const verifyMutation = useMutation({
-    mutationFn: (targetOtp: string) => authApi.verifyEmail({ email: email.trim(), otp: targetOtp }),
+    mutationFn: (targetOtp: string) => authApi.verifyEmail({ email: effectiveEmail.trim(), otp: targetOtp }),
     onSuccess: (res) => {
       submittingRef.current = false;
       if (res.accessToken && res.user) {
-        dispatch(
-          setCredentials({
-            token: res.accessToken,
-            user: res.user as AuthenticatedUser,
-          })
-        );
+        persistSessionExpiry(res.sessionExpiresAt);
+        setCredentials(res.accessToken, res.user as AuthenticatedUser);
       } else {
-        dispatch(updateLocalUser({ emailVerified: true }));
+        updateLocalUser({ emailVerified: true });
       }
       toast.success(t.verifyEmail.success);
       navigate("/dashboard", { replace: true });
@@ -143,10 +143,11 @@ export function VerifyEmailOtpPage() {
   });
 
   const resendMutation = useMutation({
-    mutationFn: () => authApi.resendVerification({ email: email.trim() }),
+    mutationFn: () => authApi.resendVerification({ email: effectiveEmail.trim() }),
     onSuccess: () => {
       toast.success(t.verifyEmail.resendSuccess);
-      setResendCount((c) => c + 1);
+      const count = markVerificationSent(effectiveEmail.trim());
+      setResendCount(count);
       setCooldown(60);
     },
     onError: (err) => toast.error(getErrorMessage(err) ?? t.common.error),
@@ -157,27 +158,27 @@ export function VerifyEmailOtpPage() {
     setOtp(clean);
     
     // Auto-submit when all 6 digits are typed
-    if (clean.length === 6 && email.trim() && !verifyMutation.isPending && !submittingRef.current) {
+    if (clean.length === 6 && effectiveEmail.trim() && !verifyMutation.isPending && !submittingRef.current) {
       submittingRef.current = true;
       verifyMutation.mutate(clean);
     }
   };
 
   const handleResend = () => {
-    if (cooldown > 0 || resendCount >= 3 || resendMutation.isPending || !email.trim()) return;
+    if (cooldown > 0 || resendCount >= 3 || resendMutation.isPending || !effectiveEmail.trim()) return;
     resendMutation.mutate();
   };
 
   const handleSubmit = () => {
-    if (otp.length === 6 && email.trim() && !verifyMutation.isPending) {
+    if (otp.length === 6 && effectiveEmail.trim() && !verifyMutation.isPending) {
       submittingRef.current = true;
       verifyMutation.mutate(otp);
     }
   };
 
-  const canSubmit = email.trim().length > 0 && otp.length === 6 && !verifyMutation.isPending;
+  const canSubmit = effectiveEmail.trim().length > 0 && otp.length === 6 && !verifyMutation.isPending;
   const maxResendsReached = resendCount >= 3;
-  const isResendDisabled = cooldown > 0 || maxResendsReached || resendMutation.isPending || !email.trim();
+  const isResendDisabled = cooldown > 0 || maxResendsReached || resendMutation.isPending || !effectiveEmail.trim();
 
   let resendLabel = t.verifyEmail.resend;
   if (maxResendsReached) {
@@ -201,9 +202,9 @@ export function VerifyEmailOtpPage() {
             <Logo />
             <div>
               <h1 className="mt-2 text-2xl font-bold tracking-tight text-fg">{t.verifyEmail.title}</h1>
-              {email ? (
+              {effectiveEmail ? (
                 <p className="mt-1.5 text-sm text-fg-muted">
-                  {t.verifyEmail.sentTo} <span className="font-semibold text-fgDir dir-ltr">{email}</span>
+                  {t.verifyEmail.sentTo} <span className="font-semibold text-fgDir dir-ltr break-all">{effectiveEmail}</span>
                 </p>
               ) : (
                 <p className="mt-1.5 text-sm text-fg-muted">
@@ -213,9 +214,9 @@ export function VerifyEmailOtpPage() {
             </div>
           </div>
         </CardHeader>
-        <CardBody className="px-6 py-6 sm:px-8">
+        <CardBody className="px-4 py-6 sm:px-8">
           <div className="space-y-6">
-            {!email ? (
+            {!effectiveEmail ? (
               <div className="space-y-4">
                 <Input
                   type="email"
@@ -234,14 +235,14 @@ export function VerifyEmailOtpPage() {
                 value={otp}
                 onChange={handleOtpChange}
                 numInputs={6}
-                renderSeparator={<span className="w-1.5 sm:w-2.5" aria-hidden />}
+                renderSeparator={<span className="w-0.5 sm:w-2" aria-hidden />}
                 renderInput={(inputProps, index) => {
                   const isFilled = Boolean(otp[index ?? 0]);
                   return (
                     <input
                       {...inputProps}
                       style={{ width: undefined }}
-                      className={`size-11 sm:size-12 rounded-2xl border-2 text-center text-xl font-bold text-fg transition-all duration-200 outline-none ${
+                      className={`size-9 sm:size-12 rounded-xl sm:rounded-2xl border-2 text-center text-lg sm:text-xl font-bold text-fg transition-all duration-200 outline-none ${
                         isFilled
                           ? "border-brand-500 bg-brand-500/10 ring-4 ring-brand-500/15 shadow-sm dark:bg-brand-500/20"
                           : "border-border bg-surface/70 hover:border-brand-400"
@@ -249,7 +250,7 @@ export function VerifyEmailOtpPage() {
                     />
                   );
                 }}
-                containerStyle="flex justify-center items-center gap-1 sm:gap-1.5"
+                containerStyle="flex justify-center items-center gap-0.5 sm:gap-1.5"
                 shouldAutoFocus
               />
             </div>
@@ -270,7 +271,7 @@ export function VerifyEmailOtpPage() {
             <div className="flex items-center justify-between text-sm pt-1">
               <button
                 type="button"
-                onClick={() => navigate(`/verify-email?email=${encodeURIComponent(email)}`)}
+                onClick={() => navigate(`/verify-email?email=${encodeURIComponent(effectiveEmail)}`)}
                 className="inline-flex items-center gap-1.5 font-medium text-fg-muted hover:text-fg transition-colors"
               >
                 <ArrowLeft className="size-3.5 rtl:rotate-180" />

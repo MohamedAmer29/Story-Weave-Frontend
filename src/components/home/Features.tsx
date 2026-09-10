@@ -78,7 +78,10 @@ export function Features() {
       id="features"
       className="relative overflow-hidden bg-surface-2/60 py-20 sm:py-28 dark:bg-surface/40"
     >
-      <div className="hero-aurora pointer-events-none absolute inset-0 opacity-50" aria-hidden />
+      <div
+        className="hero-aurora pointer-events-none absolute inset-0 opacity-50"
+        aria-hidden
+      />
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <Reveal>
           <SectionHeading
@@ -117,7 +120,9 @@ export function Features() {
                         {feat.tone === "amber" ? "Amun" : "Nile"}
                       </div>
                     </div>
-                    <div className="font-display text-5xl leading-none text-white/80">✦</div>
+                    <div className="font-display text-5xl leading-none text-white/80">
+                      ✦
+                    </div>
                   </div>
                 </div>
 
@@ -128,7 +133,9 @@ export function Features() {
                     </span>
                   </div>
                   <h3 className="text-2xl font-bold text-fg">{feat.title}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-fg-muted">{feat.desc}</p>
+                  <p className="mt-2 text-sm leading-relaxed text-fg-muted">
+                    {feat.desc}
+                  </p>
                   <p className="mt-4 border-s-2 border-brand-500/40 ps-3 font-display text-lg italic leading-relaxed text-brand-700">
                     “{feat.excerpt}”
                   </p>
@@ -148,7 +155,9 @@ export function Features() {
                 <feat.icon className="size-4" aria-hidden />
               </span>
               <h3 className="mt-4 text-lg font-bold text-fg">{feat.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-fg-muted">{feat.desc}</p>
+              <p className="mt-2 text-sm leading-relaxed text-fg-muted">
+                {feat.desc}
+              </p>
             </article>
           ))}
         </RevealStagger>

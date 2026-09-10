@@ -35,12 +35,15 @@ function guestLinks(t: ReturnType<typeof useLanguage>["t"]): NavLinkDef[] {
   ];
 }
 
-function userLinks(t: ReturnType<typeof useLanguage>["t"]): NavLinkDef[] {
+function userLinks(
+  t: ReturnType<typeof useLanguage>["t"],
+  canAuthor: boolean,
+): NavLinkDef[] {
   return [
     { to: "/dashboard", key: t.nav.dashboard },
-    { to: "/library", key: t.nav.myStories },
+    ...(canAuthor ? [{ to: "/library", key: t.nav.myStories }] : []),
     { to: "/favourites", key: t.nav.favourites },
-    { to: "/create", key: t.nav.createStory },
+    ...(canAuthor ? [{ to: "/create", key: t.nav.createStory }] : []),
     // { to: "/story-options", key: t.nav.storyOptions },
   ];
 }
@@ -57,11 +60,12 @@ export function Navbar() {
 
   const isLandingPage = location.pathname === "/";
   const authLoading = status === "idle" || status === "loading";
+  const canAuthor = isAdmin || user?.role === "AUTHOR";
   const guestNavLinks = guestLinks(t);
   const links = authLoading
     ? []
     : loggedIn
-      ? userLinks(t)
+      ? userLinks(t, Boolean(canAuthor))
       : isLandingPage
         ? guestNavLinks
         : guestNavLinks.filter((link) => link.to !== "/#features");

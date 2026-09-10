@@ -99,7 +99,11 @@ body {
   margin: 0;
   overflow-x: clip;
   background:
-    radial-gradient(circle at 12% -10%, rgba(201, 155, 75, 0.16), transparent 36%),
+    radial-gradient(
+      circle at 12% -10%,
+      rgba(201, 155, 75, 0.16),
+      transparent 36%
+    ),
     radial-gradient(circle at 88% 0%, rgba(33, 75, 77, 0.1), transparent 32%),
     var(--color-canvas);
   color: var(--color-fg);
@@ -207,6 +211,67 @@ html[dir="rtl"] .font-display {
   scrollbar-color: var(--color-border-strong) transparent;
 }
 
+:root {
+  --cursor-url: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Cpath d='M6 3 L6 35 L13 29 L19 38 L25 34 L19 25 L28 25 Z' fill='%23111' stroke='white' stroke-width='2.5' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+* {
+  cursor:
+    var(--cursor-url) 6 3,
+    auto;
+}
+
+input,
+textarea,
+select,
+[contenteditable="true"] {
+  cursor: text;
+}
+
+html.cursor-hidden,
+html.cursor-hidden * {
+  cursor: none !important;
+}
+
+.thin-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-brand-400) transparent;
+}
+.thin-scrollbar::-webkit-scrollbar {
+  width: 2px;
+  height: 2px;
+}
+.thin-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.thin-scrollbar::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--color-brand-400) 55%, transparent);
+  border-radius: 9999px;
+}
+.thin-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--color-brand-400);
+}
+
+.sidebar-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--color-brand-400) 35%, transparent)
+    transparent;
+}
+.sidebar-scrollbar::-webkit-scrollbar {
+  width: 1px;
+  height: 1px;
+}
+.sidebar-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sidebar-scrollbar::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--color-brand-400) 45%, transparent);
+  border-radius: 9999px;
+}
+.sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--color-brand-400);
+}
+
 ::selection {
   background: color-mix(in srgb, var(--color-brand-400) 42%, transparent);
 }
@@ -259,8 +324,6 @@ section[id],
       transparent 60%
     );
 }
-
-
 
 .story-book-layout {
   position: relative;
@@ -352,12 +415,6 @@ section[id],
 .cursor-feather.is-pressed svg {
   transform: translate(3px, 4px) rotate(-32deg) scale(0.84);
   transform-origin: 12% 88%;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .cursor-feather {
-    display: none !important;
-  }
 }
 
 @keyframes cursor-press {

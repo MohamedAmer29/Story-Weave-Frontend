@@ -275,10 +275,12 @@ function useFitScale() {
   return useMemo(() => {
     const compact = viewport.width < 4.2;
     const s = Math.min(
-      viewport.width / (compact ? 3.1 : 2.4),
-      viewport.height / (compact ? 2.2 : 1.6),
+      viewport.width / (compact ? 3.4 : 2.4),
+      viewport.height / (compact ? 2.4 : 1.6),
     );
-    return Math.max(0.55, Math.min(compact ? 0.9 : 1.15, s));
+    const min = compact ? 0.45 : 0.55;
+    const max = compact ? 0.75 : 1.15;
+    return Math.max(min, Math.min(max, s));
   }, [viewport.width, viewport.height]);
 }
 

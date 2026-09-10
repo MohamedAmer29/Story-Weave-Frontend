@@ -3,3 +3,4 @@ export { useLanguage } from "./useLanguage";
 export { I18nContext, STORAGE_KEY } from "./context";
 export type { I18nContextValue, Language } from "./context";
 export type { Translation } from "./en";
+export { getActiveTranslation } from "./translations";

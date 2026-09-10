@@ -13,7 +13,6 @@ import { Button } from "../components/ui/Button";
 import { getErrorMessage } from "../api/axios";
 import { useLanguage } from "../i18n";
 import { cn } from "../lib/cn";
-import { isCustomCivilization } from "../constants/civilizations";
 import {
   useStoryCivilizations,
   useStoryEras,
@@ -24,13 +23,9 @@ import {
   humanize,
   isCatalogId,
   resolveCatalogEntry,
+  resolveCivilizationValue,
 } from "../lib/storyCatalog";
-import type {
-  StoryCivilization,
-  StoryEra,
-  StoryTheme,
-  StoryType,
-} from "../api/types";
+import type { StoryEra, StoryTheme, StoryType } from "../api/types";
 
 interface CreateForm {
   title: string;
@@ -43,10 +38,9 @@ interface CreateForm {
   year?: number;
   location?: string;
   civilization: string;
-  customCivilization?: string;
   theme: StoryTheme;
   customTheme?: string;
-  visibility: "PUBLIC" | "PRIVATE" | "SHARED";
+  visibility: "PUBLIC" | "MEMBERS" | "PRIVATE" | "SHARED";
 }
 
 const languages: string[] = ["ARABIC", "ENGLISH"];
@@ -86,7 +80,13 @@ export function CreateStoryPage() {
     },
   });
 
-  const { register, handleSubmit, watch, setValue, formState: { errors } } = form;
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setValue,
+    formState: { errors },
+  } = form;
   const genreId = watch("genreId");
   const eraId = watch("eraId");
   const civilization = watch("civilization");
@@ -133,8 +133,9 @@ export function CreateStoryPage() {
     }
     const genre = resolveGenre(values.genreId);
     const era = resolveEra(values.eraId);
-    const civilizationOption = catalogs.civilizations.find(
-      (c) => c.value === values.civilization || c.legacyValue === values.civilization,
+    const civPayload = resolveCivilizationValue(
+      values.civilization,
+      catalogs.civilizations,
     );
     const story = await storiesApi.create({
       title: values.title,
@@ -150,17 +151,11 @@ export function CreateStoryPage() {
       era: era ? (era.legacyValue as StoryEra) : undefined,
       year: values.year || undefined,
       location: values.location || undefined,
-      civilization:
-        values.civilization === "UNSPECIFIED" || isCatalogId(values.civilization)
-          ? undefined
-          : (values.civilization as StoryCivilization),
-      customCivilization:
-        isCustomCivilization(values.civilization) ? values.customCivilization : undefined,
+      civilization: civPayload.civilization,
+      customCivilization: civPayload.customCivilization,
       theme: values.theme === "UNSPECIFIED" ? undefined : values.theme,
       customTheme: values.theme === "CUSTOM" ? values.customTheme : undefined,
-      civilizationId: isCatalogId(civilizationOption?.value)
-        ? civilizationOption?.value
-        : undefined,
+      civilizationId: civPayload.civilizationId,
     });
     toast.success(t.create.created);
     navigate(`/stories/${story.id}`);
@@ -173,8 +168,9 @@ export function CreateStoryPage() {
     }
     const genre = resolveGenre(values.genreId);
     const era = resolveEra(values.eraId);
-    const civilizationOption = catalogs.civilizations.find(
-      (c) => c.value === values.civilization || c.legacyValue === values.civilization,
+    const civPayload = resolveCivilizationValue(
+      values.civilization,
+      catalogs.civilizations,
     );
     const story = await storiesApi.uploadPdf(pdfFile, {
       storyType: genre ? (genre.legacyValue as StoryType) : undefined,
@@ -185,17 +181,11 @@ export function CreateStoryPage() {
       era: era ? (era.legacyValue as StoryEra) : undefined,
       year: values.year || undefined,
       location: values.location || undefined,
-      civilization:
-        values.civilization === "UNSPECIFIED" || isCatalogId(values.civilization)
-          ? undefined
-          : (values.civilization as StoryCivilization),
-      customCivilization:
-        isCustomCivilization(values.civilization) ? values.customCivilization : undefined,
+      civilization: civPayload.civilization,
+      customCivilization: civPayload.customCivilization,
       theme: values.theme === "UNSPECIFIED" ? undefined : values.theme,
       customTheme: values.theme === "CUSTOM" ? values.customTheme : undefined,
-      civilizationId: isCatalogId(civilizationOption?.value)
-        ? civilizationOption?.value
-        : undefined,
+      civilizationId: civPayload.civilizationId,
     });
     toast.success(t.create.created);
     navigate(`/stories/${story.id}`);
@@ -203,9 +193,13 @@ export function CreateStoryPage() {
 
   const onSubmit = handleSubmit((values) => {
     if (tab === "write") {
-      void createTextStory(values).catch((err) => toast.error(getErrorMessage(err) ?? t.common.error));
+      void createTextStory(values).catch((err) =>
+        toast.error(getErrorMessage(err) ?? t.common.error),
+      );
     } else {
-      void createPdfStory(values).catch((err) => toast.error(getErrorMessage(err) ?? t.common.error));
+      void createPdfStory(values).catch((err) =>
+        toast.error(getErrorMessage(err) ?? t.common.error),
+      );
     }
   });
 
@@ -213,12 +207,26 @@ export function CreateStoryPage() {
     () => (
       <div className="rounded-2xl border border-border bg-surface-2/60 p-5">
         <p className="mb-4 flex items-center gap-2 text-sm font-semibold text-fg">
-          <Sparkles className="size-4 text-brand-600 dark:text-brand-400" aria-hidden />
+          <Sparkles
+            className="size-4 text-brand-600 dark:text-brand-400"
+            aria-hidden
+          />
           {t.create.contextHint}
         </p>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <Input label={t.create.year} type="number" min={1} max={10000} placeholder={t.create.yearPh} {...register("year")} />
-          <Input label={t.create.location} placeholder={t.create.locationPh} {...register("location")} />
+          <Input
+            label={t.create.year}
+            type="number"
+            min={1}
+            max={10000}
+            placeholder={t.create.yearPh}
+            {...register("year")}
+          />
+          <Input
+            label={t.create.location}
+            placeholder={t.create.locationPh}
+            {...register("location")}
+          />
           <CatalogSelect
             label={t.create.era}
             value={eraId}
@@ -240,23 +248,53 @@ export function CreateStoryPage() {
             searchPlaceholder={t.create.civilizationSearch}
             options={catalogs.civilizations}
           />
-          {isCustomCivilization(civilization) && (
-            <Input label={t.create.customCivilization} placeholder={t.create.customCivilization} {...register("customCivilization")} />
-          )}
-          <Select label={t.create.theme} value={theme} onChange={(e) => setValue("theme", e.target.value as StoryTheme)}>
-            {(["UNSPECIFIED", "FANTASY", "HISTORICAL", "ADVENTURE", "ROMANCE", "MYSTERY", "WAR", "HORROR", "COMEDY", "DRAMA", "MYTHOLOGY", "RELIGIOUS", "CUSTOM"] as StoryTheme[]).map((th) => (
+          <Select
+            label={t.create.theme}
+            value={theme}
+            onChange={(e) => setValue("theme", e.target.value as StoryTheme)}
+          >
+            {(
+              [
+                "UNSPECIFIED",
+                "FANTASY",
+                "HISTORICAL",
+                "ADVENTURE",
+                "ROMANCE",
+                "MYSTERY",
+                "WAR",
+                "HORROR",
+                "COMEDY",
+                "DRAMA",
+                "MYTHOLOGY",
+                "RELIGIOUS",
+                "CUSTOM",
+              ] as StoryTheme[]
+            ).map((th) => (
               <option key={th} value={th}>
                 {th === "UNSPECIFIED" ? "—" : humanize(th)}
               </option>
             ))}
           </Select>
           {theme === "CUSTOM" && (
-            <Input label={t.create.customTheme} placeholder={t.create.customTheme} {...register("customTheme")} />
+            <Input
+              label={t.create.customTheme}
+              placeholder={t.create.customTheme}
+              {...register("customTheme")}
+            />
           )}
         </div>
       </div>
     ),
-    [eraId, civilization, theme, setValue, register, t, catalogs, erasQuery.isLoading]
+    [
+      eraId,
+      civilization,
+      theme,
+      setValue,
+      register,
+      t,
+      catalogs,
+      erasQuery.isLoading,
+    ],
   );
 
   return (
@@ -268,17 +306,25 @@ export function CreateStoryPage() {
       </Helmet>
       <section className="hero-aurora relative">
         <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 lg:px-8">
-          <h1 className="font-display text-3xl font-bold text-fg sm:text-4xl">{t.create.title}</h1>
+          <h1 className="font-display text-3xl font-bold text-fg sm:text-4xl">
+            {t.create.title}
+          </h1>
           <p className="mt-2 text-fg-muted">{t.create.subtitle}</p>
 
-          <div className="mt-6 flex rounded-lg border border-border bg-surface p-1" role="tablist" aria-label="Creation mode">
+          <div
+            className="mt-6 flex rounded-lg border border-border bg-surface p-1"
+            role="tablist"
+            aria-label="Creation mode"
+          >
             <button
               role="tab"
               aria-selected={tab === "write"}
               onClick={() => setTab("write")}
               className={cn(
                 "flex-1 rounded-md px-4 py-2 text-sm font-semibold transition-colors",
-                tab === "write" ? "bg-brand-600 text-white" : "text-fg-muted hover:text-fg"
+                tab === "write"
+                  ? "bg-brand-600 text-white"
+                  : "text-fg-muted hover:text-fg",
               )}
             >
               {t.create.writeTab}
@@ -289,7 +335,9 @@ export function CreateStoryPage() {
               onClick={() => setTab("pdf")}
               className={cn(
                 "flex-1 rounded-md px-4 py-2 text-sm font-semibold transition-colors",
-                tab === "pdf" ? "bg-brand-600 text-white" : "text-fg-muted hover:text-fg"
+                tab === "pdf"
+                  ? "bg-brand-600 text-white"
+                  : "text-fg-muted hover:text-fg",
               )}
             >
               {t.create.uploadTab}
@@ -305,7 +353,16 @@ export function CreateStoryPage() {
                     placeholder={t.create.storyTitlePh}
                     required
                     error={errors.title?.message}
-                    {...register("title", { required: t.validation.titleRequired, maxLength: { value: 200, message: t.validation.maxLength.replace("{count}", "200") } })}
+                    {...register("title", {
+                      required: t.validation.titleRequired,
+                      maxLength: {
+                        value: 200,
+                        message: t.validation.maxLength.replace(
+                          "{count}",
+                          "200",
+                        ),
+                      },
+                    })}
                   />
                   <CatalogSelect
                     label={t.create.storyType}
@@ -345,7 +402,8 @@ export function CreateStoryPage() {
                   {...register("visualStyle")}
                 />
                 <p className="text-sm text-fg-muted">
-                  Story language is for reading and narration. It does not control the image style, culture, or setting.
+                  Story language is for reading and narration. It does not
+                  control the image style, culture, or setting.
                 </p>
 
                 {tab === "write" ? (
@@ -355,7 +413,9 @@ export function CreateStoryPage() {
                     required
                     rows={12}
                     error={errors.text?.message}
-                    {...register("text", { required: t.validation.textRequired })}
+                    {...register("text", {
+                      required: t.validation.textRequired,
+                    })}
                   />
                 ) : (
                   <div>
@@ -377,7 +437,9 @@ export function CreateStoryPage() {
                       <span className="text-sm font-semibold text-fg">
                         {pdfFile ? pdfFile.name : t.create.uploadLabel}
                       </span>
-                      <span className="text-xs text-fg-faint">{t.create.uploadHint}</span>
+                      <span className="text-xs text-fg-faint">
+                        {t.create.uploadHint}
+                      </span>
                     </button>
                   </div>
                 )}
@@ -389,27 +451,32 @@ export function CreateStoryPage() {
             <Card>
               <CardHeader>
                 <h2 className="flex items-center gap-2 text-base font-bold text-fg">
-                  <MapPin className="size-4 text-brand-600 dark:text-brand-400" aria-hidden />
+                  <MapPin
+                    className="size-4 text-brand-600 dark:text-brand-400"
+                    aria-hidden
+                  />
                   {t.reader.visibilityLabel}
                 </h2>
               </CardHeader>
               <CardBody>
-                <div className="grid grid-cols-3 gap-3">
-                  {(["PRIVATE", "PUBLIC", "SHARED"] as const).map((v) => (
-                    <button
-                      key={v}
-                      type="button"
-                      onClick={() => setValue("visibility", v)}
-                      className={cn(
-                        "rounded-lg border p-3 text-sm font-semibold transition-colors",
-                        watch("visibility") === v
-                          ? "border-brand-500 bg-brand-500/10 text-brand-600 dark:text-brand-400"
-                          : "border-border bg-surface text-fg-muted hover:border-brand-500/40"
-                      )}
-                    >
-                      {t.status[v]}
-                    </button>
-                  ))}
+                <div className="grid grid-cols-2 gap-3">
+                  {(["PRIVATE", "PUBLIC", "MEMBERS", "SHARED"] as const).map(
+                    (v) => (
+                      <button
+                        key={v}
+                        type="button"
+                        onClick={() => setValue("visibility", v)}
+                        className={cn(
+                          "rounded-lg border p-3 text-sm font-semibold transition-colors",
+                          watch("visibility") === v
+                            ? "border-brand-500 bg-brand-500/10 text-brand-600 dark:text-brand-400"
+                            : "border-border bg-surface text-fg-muted hover:border-brand-500/40",
+                        )}
+                      >
+                        {t.status[v]}
+                      </button>
+                    ),
+                  )}
                 </div>
               </CardBody>
             </Card>

@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Helmet } from "react-helmet-async";
 import { useQuery } from "@tanstack/react-query";
 import { Heart, Search } from "lucide-react";
 import { storiesApi } from "../api/storiesApi";
@@ -10,6 +9,8 @@ import { EmptyState, ErrorState } from "../components/ui/States";
 import { Input, Select } from "../components/ui/field";
 import { Pagination } from "../components/ui/Pagination";
 import { Button } from "../components/ui/Button";
+import { Seo } from "../components/common/Seo";
+import { absoluteUrl } from "../lib/seo";
 import { useLanguage } from "../i18n";
 import { useAuth } from "../hooks/useAuth";
 import { useFavouritesIds } from "../hooks/useFavourites";
@@ -29,7 +30,7 @@ export function ExplorePage() {
     queryKey: ["stories", "explore", { page, search, sort, storyType }],
     queryFn: () => {
       if (search) {
-        return storiesApi.searchPublic({ q: search, page, limit: 9, sort: storyType ? undefined : sort });
+        return storiesApi.searchPublic({ search, page, limit: 9, sort: storyType ? undefined : sort });
       }
         return storiesApi.publicStories({ page, limit: 9, sort, storyType: storyType || undefined });
     },
@@ -38,6 +39,26 @@ export function ExplorePage() {
   const stories = query.data?.data ?? [];
   const meta = query.data?.meta;
 
+  const exploreJsonLd =
+    stories.length > 0
+      ? {
+          "@context": "https://schema.org",
+          "@type": "CollectionPage",
+          name: t.explore.title,
+          url: absoluteUrl("/explore"),
+          mainEntity: {
+            "@type": "ItemList",
+            numberOfItems: stories.length,
+            itemListElement: stories.slice(0, 9).map((s, index) => ({
+              "@type": "ListItem",
+              position: index + 1,
+              url: absoluteUrl(`/stories/${s.id}`),
+              name: s.title,
+            })),
+          },
+        }
+      : undefined;
+
   const applySearch = (value: string) => {
     setSearch(value);
     setPage(1);
@@ -45,12 +66,13 @@ export function ExplorePage() {
 
   return (
     <>
-      <Helmet>
-        <title>
-          {t.explore.title} · {t.brand.name}
-        </title>
-        <meta name="description" content={t.explore.subtitle} />
-      </Helmet>
+      <Seo
+        title={`${t.explore.title} · ${t.brand.name}`}
+        description={t.explore.subtitle}
+        canonical="/explore"
+        keywords={[t.seo.storySuffix, t.brand.name]}
+        jsonLd={exploreJsonLd}
+      />
       <section className="hero-aurora relative min-h-[70vh]">
         <div className="page-shell">
           <p className="inline-flex items-center gap-2 rounded-full border border-brand-500/20 bg-brand-500/8 px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.2em] text-brand-700">

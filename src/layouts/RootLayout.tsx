@@ -18,7 +18,7 @@ import {
   User,
   X,
 } from "lucide-react";
-import { ToastContainer } from "react-toastify";
+import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { Navbar } from "../components/layout/Navbar";
 import { SessionExtensionBanner } from "../components/layout/SessionExtensionBanner";
@@ -49,13 +49,21 @@ function SidebarContent({ collapsed = false }: { collapsed?: boolean }) {
 
   if (!loggedIn) return null;
 
+  const canAuthor = isAdmin || user?.role === "AUTHOR";
+
   const mainNavItems = [
     { to: "/dashboard", label: t.nav.dashboard, icon: LayoutDashboard },
-    { to: "/library", label: t.nav.myStories, icon: Library },
+    ...(canAuthor
+      ? [{ to: "/library", label: t.nav.myStories, icon: Library }]
+      : []),
     { to: "/favourites", label: t.nav.favourites, icon: Heart },
     { to: "/explore", label: t.nav.explore, icon: Compass },
-    { to: "/create", label: t.nav.createStory, icon: PlusCircle },
-    { to: "/story-options", label: t.nav.storyOptions, icon: Tags },
+    ...(canAuthor
+      ? [{ to: "/create", label: t.nav.createStory, icon: PlusCircle }]
+      : []),
+    ...(canAuthor
+      ? [{ to: "/story-options", label: t.nav.storyOptions, icon: Tags }]
+      : []),
     {
       to: "/notifications",
       label: t.nav.notifications,
@@ -211,7 +219,7 @@ function SidebarContent({ collapsed = false }: { collapsed?: boolean }) {
           type="button"
           onClick={() => {
             closeDrawer();
-            void logout();
+            void logout().then(() => toast.success(t.auth.logoutSuccess));
           }}
           title={collapsed ? t.nav.logout : undefined}
           className={cn(
@@ -252,7 +260,7 @@ function AuthenticatedSidebar() {
         collapsed ? "w-20" : "w-64",
       )}
     >
-      <div className="h-full overflow-y-auto px-3 py-4">
+      <div className="thin-scrollbar sidebar-scrollbar h-full overflow-y-auto px-3 py-4">
         <SidebarContent collapsed={collapsed} />
       </div>
 
@@ -301,7 +309,7 @@ function SidebarDrawer() {
         )}
         aria-hidden={!mobileOpen}
       >
-        <div className="flex h-full flex-col overflow-y-auto p-4">
+        <div className="thin-scrollbar sidebar-scrollbar flex h-full flex-col overflow-y-auto p-4">
           <div className="mb-4 flex items-center justify-between pb-3 border-b border-border/60">
             <Logo />
             <button
@@ -379,7 +387,7 @@ function UnverifiedEmailBanner() {
         <span className="font-medium">{t.verifyEmail.bannerMessage}</span>
       </div>
       <Link
-        to={`/verify-email-otp?email=${encodeURIComponent(user.email)}`}
+        to={`/verify-email?email=${encodeURIComponent(user.email)}`}
         className="font-semibold underline hover:text-amber-800 dark:hover:text-amber-100 shrink-0"
       >
         {t.verifyEmail.verifyNow}
@@ -394,16 +402,17 @@ function LayoutFrame({ dir, theme }: { dir: string; theme: string }) {
   const location = useLocation();
 
   const isVerifyEmailPage = location.pathname.startsWith("/verify-email");
+  const isResetPasswordPage = location.pathname.startsWith("/reset-password");
 
   return (
     <div className="flex min-h-screen flex-col bg-canvas text-fg selection:bg-brand-500/20 selection:text-brand-700 dark:selection:text-brand-300">
       <ScrollToTop />
-      {!isVerifyEmailPage && <Navbar />}
+      {!isVerifyEmailPage && !isResetPasswordPage && <Navbar />}
       {!isVerifyEmailPage && <UnverifiedEmailBanner />}
       {!isVerifyEmailPage && <SessionExtensionBanner />}
       <div className="mx-auto flex w-full max-w-[1800px] flex-1">
         {!isVerifyEmailPage && loggedIn && <AuthenticatedSidebar />}
-        <main className="relative min-w-0 flex-1 px-3 sm:px-6 lg:px-8">
+        <main className="relative z-0 min-w-0 flex-1 px-3 sm:px-6 lg:px-8">
           <Outlet />
           {isLoading && <ContentSkeleton />}
         </main>
@@ -419,7 +428,10 @@ function LayoutFrame({ dir, theme }: { dir: string; theme: string }) {
 
       {!isVerifyEmailPage && <SidebarDrawer />}
 
-      {!isVerifyEmailPage && !isLoading && !loggedIn && <Footer />}
+      {!isVerifyEmailPage &&
+        !isResetPasswordPage &&
+        !isLoading &&
+        !loggedIn && <Footer />}
     </div>
   );
 }

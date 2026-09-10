@@ -42,10 +42,7 @@ import { useAppDispatch, useAppSelector } from "../store";
 import { setPage as savePage } from "../store/readerSlice";
 import { cn } from "../lib/cn";
 import { gsap, prefersReducedMotion, revealEase } from "../lib/gsap";
-import {
-  buildResponsiveSrcSet,
-  withImageCacheBust,
-} from "../utils/imageSrcSet";
+import { withImageCacheBust } from "../utils/imageSrcSet";
 import type {
   IllustrationPageStatus,
   VisualContextOverrides,
@@ -238,9 +235,7 @@ export function StoryReaderPage() {
 
   const favoriteMutation = useMutation({
     mutationFn: (favoritedNow: boolean) =>
-      favoritedNow
-        ? favouritesApi.remove(storyId)
-        : favouritesApi.add(storyId),
+      favoritedNow ? favouritesApi.remove(storyId) : favouritesApi.add(storyId),
     onMutate: async (favoritedNow) => {
       await queryClient.cancelQueries({
         queryKey: ["story", storyId, "favorite"],
@@ -408,7 +403,7 @@ export function StoryReaderPage() {
       const p = pages.find((item) => item.pageNumber === index);
       const url = p?.imageUrl;
       if (!url) return;
-      const stamp = p.imageGeneratedAt || p.updatedAt || url;
+      const stamp = p.updatedAt || url;
       const src = withImageCacheBust(url, stamp);
       if (!src) return;
       if (preloadedSrcs.current.has(src)) return;
@@ -461,13 +456,11 @@ export function StoryReaderPage() {
   const storyCoverSrc = story.cover.imageUrl
     ? withImageCacheBust(
         story.cover.imageUrl,
-        story.coverImageGeneratedAt || story.updatedAt,
+        story.updatedAt,
       )
     : null;
   const pageImageStamp =
-    currentPageEntity?.imageGeneratedAt ||
-    currentPageEntity?.updatedAt ||
-    current?.imageUrl;
+    currentPageEntity?.updatedAt || current?.imageUrl;
   const currentImageSrc = current?.imageUrl
     ? withImageCacheBust(current.imageUrl, pageImageStamp)
     : null;
@@ -514,7 +507,11 @@ export function StoryReaderPage() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => favoriteMutation.mutate(favoriteQuery.data?.favorited ?? false)}
+                onClick={() =>
+                  favoriteMutation.mutate(
+                    favoriteQuery.data?.favorited ?? false,
+                  )
+                }
                 disabled={favoriteMutation.isPending}
                 className="gap-1.5 text-fg-muted hover:text-fg"
                 aria-label={
@@ -626,7 +623,8 @@ export function StoryReaderPage() {
                   tone={
                     story.visibility === "PUBLIC"
                       ? "brand"
-                      : story.visibility === "SHARED"
+                      : story.visibility === "SHARED" ||
+                          story.visibility === "MEMBERS"
                         ? "info"
                         : "neutral"
                   }
@@ -641,6 +639,7 @@ export function StoryReaderPage() {
                       story.visibility.toLowerCase() as
                         | "public"
                         | "private"
+                        | "members"
                         | "shared"
                     ]
                   }
@@ -1182,71 +1181,71 @@ function ShareModal({
         title={t.share.title}
         description={t.share.subtitle}
       >
-      <div className="space-y-4">
-        <div className="flex gap-2">
-          <Input
-            value={recipient}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-              setRecipient(e.target.value);
-              setError(null);
-            }}
-            placeholder={t.share.userEmail}
-            aria-label={t.share.userEmail}
-            type="email"
-          />
-          <Button
-            onClick={() => {
-              const trimmed = recipient.trim();
-              if (!/^\S+@\S+\.\S+$/.test(trimmed)) {
-                setError(t.validation.emailInvalid);
-                return;
-              }
-              void shareMutation.mutateAsync(trimmed).catch(() => undefined);
-            }}
-            loading={shareMutation.isPending}
-          >
-            {t.share.shareAction}
-          </Button>
-        </div>
-        {error && <p className="text-sm text-red-500">{error}</p>}
+        <div className="space-y-4">
+          <div className="flex gap-2">
+            <Input
+              value={recipient}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                setRecipient(e.target.value);
+                setError(null);
+              }}
+              placeholder={t.share.userEmail}
+              aria-label={t.share.userEmail}
+              type="email"
+            />
+            <Button
+              onClick={() => {
+                const trimmed = recipient.trim();
+                if (!/^\S+@\S+\.\S+$/.test(trimmed)) {
+                  setError(t.validation.emailInvalid);
+                  return;
+                }
+                void shareMutation.mutateAsync(trimmed).catch(() => undefined);
+              }}
+              loading={shareMutation.isPending}
+            >
+              {t.share.shareAction}
+            </Button>
+          </div>
+          {error && <p className="text-sm text-red-500">{error}</p>}
 
-        <div>
-          <p className="mb-2 text-sm font-semibold text-fg">
-            {t.share.sharedWith}
-          </p>
-          {sharesQuery.isLoading ? (
-            <p className="text-sm text-fg-faint">{t.common.loading}</p>
-          ) : sharesQuery.data?.data.length === 0 ? (
-            <p className="text-sm text-fg-faint">{t.share.noShares}</p>
-          ) : (
-            <ul className="space-y-2">
-              {(sharesQuery.data?.data ?? []).map((share) => (
-                <li
-                  key={share.userId}
-                  className="flex items-center justify-between rounded-lg border border-border bg-surface-2 px-3 py-2"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-fg">
-                      {share.name}
-                    </p>
-                    <p className="truncate text-xs text-fg-muted">
-                      {share.email}
-                    </p>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setRevokeTarget(share.userId)}
-                    className="text-fg-muted hover:text-red-600"
+          <div>
+            <p className="mb-2 text-sm font-semibold text-fg">
+              {t.share.sharedWith}
+            </p>
+            {sharesQuery.isLoading ? (
+              <p className="text-sm text-fg-faint">{t.common.loading}</p>
+            ) : sharesQuery.data?.data.length === 0 ? (
+              <p className="text-sm text-fg-faint">{t.share.noShares}</p>
+            ) : (
+              <ul className="space-y-2">
+                {(sharesQuery.data?.data ?? []).map((share) => (
+                  <li
+                    key={share.userId}
+                    className="flex items-center justify-between rounded-lg border border-border bg-surface-2 px-3 py-2"
                   >
-                    {t.share.revoke}
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          )}
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-fg">
+                        {share.name}
+                      </p>
+                      <p className="truncate text-xs text-fg-muted">
+                        {share.email}
+                      </p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setRevokeTarget(share.userId)}
+                      className="text-fg-muted hover:text-red-600"
+                    >
+                      {t.share.revoke}
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
-      </div>
       </Modal>
 
       <ConfirmDialog

@@ -23,8 +23,7 @@ import { useContentLoading } from "../layouts/PageLoading";
 import { ErrorState } from "../components/ui/States";
 import { getErrorMessage } from "../api/axios";
 import { useAuth } from "../hooks/useAuth";
-import { useAppDispatch } from "../store";
-import { updateLocalUser } from "../store/authSlice";
+import { updateLocalUser } from "../lib/authStore";
 import { useLanguage } from "../i18n";
 import { buildResponsiveSrcSet } from "../utils/imageSrcSet";
 
@@ -74,7 +73,6 @@ function lastUsedLabel(t: T, lastUsedAt: string | null): string {
 export function ProfilePage() {
   const { t } = useLanguage();
   const { user } = useAuth();
-  const dispatch = useAppDispatch();
   const queryClient = useQueryClient();
   const avatarInput = useRef<HTMLInputElement>(null);
 
@@ -105,15 +103,13 @@ export function ProfilePage() {
       usersApi.updateProfile({ firstName: v.firstName, lastName: v.lastName }),
     onSuccess: (res) => {
       toast.success(t.profile.updated);
-      dispatch(
-        updateLocalUser({
-          firstName: res.data.firstName,
-          lastName: res.data.lastName,
-          name: res.data.name,
-          avatarUrl: res.data.avatarUrl,
-          email: res.data.email,
-        }),
-      );
+      updateLocalUser({
+        firstName: res.data.firstName,
+        lastName: res.data.lastName,
+        name: res.data.name,
+        avatarUrl: res.data.avatarUrl,
+        email: res.data.email,
+      });
       void queryClient.invalidateQueries({ queryKey: ["profile"] });
     },
     onError: (err) => toast.error(getErrorMessage(err) ?? t.common.error),
@@ -123,7 +119,7 @@ export function ProfilePage() {
     mutationFn: (file: File) => usersApi.uploadAvatar(file),
     onSuccess: (res) => {
       toast.success(t.profile.avatarUpdated);
-      dispatch(updateLocalUser({ avatarUrl: res.data.avatarUrl }));
+      updateLocalUser({ avatarUrl: res.data.avatarUrl });
       void queryClient.invalidateQueries({ queryKey: ["profile"] });
     },
     onError: (err) => toast.error(getErrorMessage(err) ?? t.common.error),
